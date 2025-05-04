@@ -9,7 +9,6 @@
 <?import javafx.scene.layout.Pane?>
 <?import javafx.scene.text.Font?>
 
-
 <Pane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="sample.ChatController">
    <children>
       <AnchorPane prefHeight="410.0" prefWidth="190.0">
@@ -19,19 +18,17 @@
       </AnchorPane>
       <AnchorPane layoutX="190.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="410.0">
          <children>
-            <TextField layoutY="370.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="30.0" prefWidth="380.0" />
-            <Button layoutX="380.0" layoutY="370.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" prefHeight="30.0" prefWidth="30.0" style="-fx-background-color: transperent; -fx-padding: 0; -fx-border-color: transperent;" textOverrun="CLIP">
+            <TextField fx:id="messageTextField" layoutY="370.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="30.0" prefWidth="380.0" />
+            <Button fx:id="sendButton" layoutX="380.0" layoutY="370.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" mnemonicParsing="false" onAction="#sendButtonOnActivation" prefHeight="30.0" prefWidth="30.0" textOverrun="CLIP">
                <font>
                   <Font size="2.0" />
                </font>
-               <graphic>
-                  <ImageView fitHeight="30.0" fitWidth="30.0" pickOnBounds="true" preserveRatio="true">
-                     <image>
-                        <Image url="@send.png" />
-                     </image>
-                  </ImageView>
-               </graphic>
             </Button>
+            <ImageView fitHeight="30.0" fitWidth="30.0" layoutX="112.0" layoutY="101.0" pickOnBounds="true" preserveRatio="true">
+               <image>
+                  <Image url="@send.png" />
+               </image>
+            </ImageView>
          </children>
       </AnchorPane>
    </children>

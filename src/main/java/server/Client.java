@@ -23,13 +23,10 @@ public class Client {
         }
     }
 
-    public void sendMessage() {
-        Scanner consoleScanner = new Scanner(System.in);
-        while (clientSocket.isConnected()) {
-            String messageToSend = consoleScanner.nextLine();
-            outMessage.println(userName + ": " + messageToSend);
+    public void sendMessage(String message) {
+        if (clientSocket.isConnected()) {
+            outMessage.println(userName + ": " + message);
         }
-        consoleScanner.close();
     }
 
     public void listenForMessage() {
@@ -63,17 +60,17 @@ public class Client {
     }
 
     public static void main(String[] args) throws IOException {
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Write your username: ");
-        String userName = scanner.nextLine();
-        Socket socket = new Socket(Constants.IP_ADDR, Constants.PORT);
+        // Scanner scanner = new Scanner(System.in);
+        // System.out.println("Write your username: ");
+        // String userName = scanner.nextLine();
+        // Socket socket = new Socket(Constants.IP_ADDR, Constants.PORT);
 
-        Client client = new Client(socket, userName);
-        client.outMessage.println(userName); // Send name to server
+        // Client client = new Client(socket, userName);
+        // client.outMessage.println(userName); // Send name to server
 
-        client.listenForMessage();
-        client.sendMessage();
+        // client.listenForMessage();
+        // // client.sendMessage();
 
-        scanner.close();
+        // scanner.close();
     }
 }
