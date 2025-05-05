@@ -12,7 +12,6 @@ public class ClientHandler implements Runnable {
 
     private PrintWriter outMessage;
     private Scanner inMessage;
-    public String userName;
 
     public ClientHandler(Socket socket, Server server) {
         try {
@@ -22,15 +21,13 @@ public class ClientHandler implements Runnable {
             this.clientSocket = socket;
             this.outMessage = new PrintWriter(socket.getOutputStream(), true);
             this.inMessage = new Scanner(socket.getInputStream());
-
-            this.userName = inMessage.nextLine();
         } catch (IOException e) {
             closeEverything(clientSocket, inMessage, outMessage);
         }
     }
 
     public void closeEverything(Socket socket, Scanner scanner, PrintWriter printWriter) {
-        server.removeClient(this);
+        // server.removeClient(this);
         try {
             if (socket != null) {
                 socket.close();
@@ -47,7 +44,7 @@ public class ClientHandler implements Runnable {
     }
 
     public void closeConnection() {
-        server.removeClient(this);
+        // server.removeClient(this);
         server.decreaseByOneClientCount();
         server.sendMessageToAllClients(server.getClientCount() + "");
     }
@@ -62,11 +59,6 @@ public class ClientHandler implements Runnable {
 
     @Override
     public void run() {
-        while (true) {
-            server.sendMessageToAllClients("NEW CLIENT");
-            break;
-        }
-
         while (clientSocket.isConnected()) {
 
             String clientMessage = inMessage.nextLine();

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
+import java.util.function.Consumer;
 
 public class Client {
     private Socket clientSocket;
@@ -11,6 +12,7 @@ public class Client {
     private PrintWriter outMessage; // Sending
     private Scanner inMessage; // Getting from server
     public String userName;
+    private Consumer<String> onMessageReceived;
 
     public Client(Socket socket, String userName) {
         try {
@@ -29,6 +31,10 @@ public class Client {
         }
     }
 
+    public void setOnMessageReceived(Consumer<String> onMessageReceived) {
+        this.onMessageReceived = onMessageReceived;
+    }
+
     public void listenForMessage() {
         new Thread(new Runnable() {
             @Override
@@ -37,7 +43,9 @@ public class Client {
 
                 while (clientSocket.isConnected()) {
                     messageFromChat = inMessage.nextLine();
-                    System.out.println(messageFromChat);
+                    if (onMessageReceived != null) {
+                        onMessageReceived.accept(messageFromChat);
+                    }
                 }
             }
         }).start();
@@ -57,20 +65,5 @@ public class Client {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public static void main(String[] args) throws IOException {
-        // Scanner scanner = new Scanner(System.in);
-        // System.out.println("Write your username: ");
-        // String userName = scanner.nextLine();
-        // Socket socket = new Socket(Constants.IP_ADDR, Constants.PORT);
-
-        // Client client = new Client(socket, userName);
-        // client.outMessage.println(userName); // Send name to server
-
-        // client.listenForMessage();
-        // // client.sendMessage();
-
-        // scanner.close();
     }
 }

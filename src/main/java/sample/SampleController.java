@@ -11,6 +11,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.PasswordField;
 import javafx.scene.Node;
 import javafx.stage.Stage;
+import server.DatabaseConnection;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

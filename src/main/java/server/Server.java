@@ -19,7 +19,6 @@ public class Server {
                 System.out.println("Connection established");
 
                 ClientHandler clientHandler = new ClientHandler(clientSocket, this);
-                System.out.println("USERNAME IS: " + clientHandler.userName);
                 clients.add(clientHandler);
 
                 Thread thread = new Thread(clientHandler);
@@ -40,7 +39,6 @@ public class Server {
         }
     }
 
-    // Client logic
     public void increaseByOneClientCount() {
         client_count++;
     }
@@ -59,10 +57,11 @@ public class Server {
         }
     }
 
-    public void removeClient(ClientHandler clientHandler) {
-        clients.remove(clientHandler);
-        sendMessageToAllClients("SERVER: User " + clientHandler.userName + " has leaved the chat(");
-    }
+    // public void removeClient(ClientHandler clientHandler) {
+    // clients.remove(clientHandler);
+    // sendMessageToAllClients("SERVER: User " + clientHandler.userName + " has
+    // leaved the chat(");
+    // }
 
     public static void main(String[] args) throws IOException {
         Server server = new Server();
