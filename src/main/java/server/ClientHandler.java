@@ -1,9 +1,14 @@
 package server;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
+import server.XML.HandleClientXML;
 
 public class ClientHandler implements Runnable {
     private Server server;
@@ -59,16 +64,27 @@ public class ClientHandler implements Runnable {
 
     @Override
     public void run() {
-        while (clientSocket.isConnected()) {
+        try (
+                InputStream inputStream = clientSocket.getInputStream();
+                OutputStream outputStream = clientSocket.getOutputStream()) {
+            Scanner scanner = new Scanner(inputStream, StandardCharsets.UTF_8);
+            scanner.useDelimiter("<END_OF_MESSAGE>"); // Устанавливаем маркер окончания сообщения
 
-            String clientMessage = inMessage.nextLine();
-            if (clientMessage.equals("END")) {
-                break;
+            while (!clientSocket.isClosed() && scanner.hasNext()) {
+                // 1. Считываем XML до маркера
+                String clientXml = scanner.next().trim(); // Убираем лишние пробелы
+                System.out.println("Received on server XML:\n" + clientXml);
+
+                // 2. Обработка XML и генерация ответа
+                String responseXml = HandleClientXML.processXml(clientXml);
+
+                // 3. Добавляем маркер <end> к ответу и отправляем клиенту
+                responseXml += "<END_OF_MESSAGE>";
+                outputStream.write(responseXml.getBytes(StandardCharsets.UTF_8));
+                outputStream.flush();
             }
-
-            System.out.println(clientMessage); // for us
-            server.sendMessageToAllClients(clientMessage); // for clients
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
-
 }

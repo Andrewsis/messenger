@@ -3,8 +3,7 @@ package server.XML;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -15,11 +14,11 @@ import org.w3c.dom.NodeList;
 import org.w3c.dom.Node;
 
 public class HandleClientXML {
-    public void handleClient(InputStream inputStream, OutputStream outputStream) throws Exception {
+    public static String processXml(String xmlString) throws Exception {
         // Парсинг входящего XML
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
-        Document doc = builder.parse(inputStream);
+        Document doc = builder.parse(new ByteArrayInputStream(xmlString.getBytes(StandardCharsets.UTF_8)));
 
         // Корневой элемент
         Element root = doc.getDocumentElement();
@@ -57,7 +56,6 @@ public class HandleClientXML {
         }
 
         // Отправка XML-ответа
-        outputStream.write(responseXml.getBytes(StandardCharsets.UTF_8));
-        outputStream.flush();
+        return responseXml;
     }
 }

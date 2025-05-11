@@ -31,6 +31,12 @@ public class Client {
         }
     }
 
+    public void sendSystemMessage(String message) {
+        if (clientSocket.isConnected()) {
+            outMessage.println(message);
+        }
+    }
+
     public void setOnMessageReceived(Consumer<String> onMessageReceived) {
         this.onMessageReceived = onMessageReceived;
     }
@@ -39,12 +45,14 @@ public class Client {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                String messageFromChat;
+                inMessage.useDelimiter("<END_OF_MESSAGE>");
 
                 while (clientSocket.isConnected()) {
-                    messageFromChat = inMessage.nextLine();
-                    if (onMessageReceived != null) {
-                        onMessageReceived.accept(messageFromChat);
+                    if (inMessage.hasNext()) {
+                        String messageFromChat = inMessage.next().trim(); // читает до <END_OF_MESSAGE>
+                        if (onMessageReceived != null) {
+                            onMessageReceived.accept(messageFromChat);
+                        }
                     }
                 }
             }

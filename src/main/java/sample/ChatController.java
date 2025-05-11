@@ -3,7 +3,6 @@ package sample;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -11,19 +10,14 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
-import javafx.stage.Stage;
 import server.Client;
 import server.Constants;
 import server.DatabaseConnection;
-
 import java.sql.Connection;
-import java.sql.Statement;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.sql.ResultSet;
-import java.io.IOException;
 import java.net.Socket;
 import java.net.URL;
+import java.util.List;
 import java.util.ResourceBundle;
 import javafx.application.Platform;
 
@@ -75,18 +69,26 @@ public class ChatController implements Initializable {
             this.client = new Client(socket, this.userName);
 
             client.setOnMessageReceived(message -> {
-                Platform.runLater(() -> addMessageToChat(message));
+                Platform.runLater(() -> {
+                    if (message.contains("<chatPreviews>")) {
+                        handleServerResponse(message);
+                    } // если это XML с чатами
+                    else {
+                        addMessageToChat(message); // обычное сообщение
+                    }
+                });
             });
             client.listenForMessage();
-        } catch (IOException e) {
+
+            String requestXml = ClientRequest.getChatReviewsRequest(userName);
+            client.sendSystemMessage(requestXml);
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public void initialize(URL location, ResourceBundle resources) {
-        DatabaseConnection connectNow = new DatabaseConnection();
-        Connection connectDB = connectNow.getConnection();
-
         accountListView.setCellFactory(param -> new ListCell<ChatPreview>() {
             private final HBox content;
             private final VBox textContainer;
@@ -120,32 +122,6 @@ public class ChatController implements Initializable {
             }
         });
 
-        String connectQuery = "SELECT DISTINCT ON (chats.id) " +
-                "chats.id AS chat_id, " +
-                "chats.name AS chat_name, " +
-                "messages.content AS message_content, " +
-                "messages.timestamp AS message_time " +
-                "FROM chats " +
-                "JOIN messages ON chats.id = messages.chat_id " +
-                "ORDER BY chats.id, messages.timestamp DESC;";
-
-        try {
-            Statement statement = connectDB.createStatement();
-            ResultSet queryResult = statement.executeQuery(connectQuery);
-
-            while (queryResult.next()) {
-                int chatId = queryResult.getInt("chat_id");
-                String chatName = queryResult.getString("chat_name");
-                String messageContent = queryResult.getString("message_content");
-                LocalDateTime timestamp = queryResult.getObject("message_time", LocalDateTime.class);
-
-                ChatPreview preview = new ChatPreview(chatId, chatName, messageContent, timestamp);
-                accountListView.getItems().add(preview);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         accountListView.setOnMouseClicked(event -> {
             ChatPreview selectedItem = accountListView.getSelectionModel().getSelectedItem();
             if (selectedItem != null) {
@@ -154,4 +130,16 @@ public class ChatController implements Initializable {
         });
     }
 
+    private void handleServerResponse(String responseXml) {
+        try {
+            List<ChatPreview> chatPreviews = ClientRequest.parseChatPreviews(responseXml);
+
+            // Обновляем список чатов в интерфейсе
+            accountListView.getItems().clear();
+            accountListView.getItems().addAll(chatPreviews);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
