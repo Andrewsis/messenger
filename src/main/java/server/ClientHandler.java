@@ -71,14 +71,11 @@ public class ClientHandler implements Runnable {
             scanner.useDelimiter("<END_OF_MESSAGE>"); // Устанавливаем маркер окончания сообщения
 
             while (!clientSocket.isClosed() && scanner.hasNext()) {
-                // 1. Считываем XML до маркера
-                String clientXml = scanner.next().trim(); // Убираем лишние пробелы
+                String clientXml = scanner.next().trim();
                 System.out.println("Received on server XML:\n" + clientXml);
 
-                // 2. Обработка XML и генерация ответа
                 String responseXml = HandleClientXML.processXml(clientXml);
 
-                // 3. Добавляем маркер <end> к ответу и отправляем клиенту
                 responseXml += "<END_OF_MESSAGE>";
                 outputStream.write(responseXml.getBytes(StandardCharsets.UTF_8));
                 outputStream.flush();

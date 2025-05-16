@@ -1,7 +1,6 @@
-package server.XML;
+package common;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -10,21 +9,21 @@ import java.util.List;
 
 import server.DatabaseConnection;
 
-public class Chat {
+public class ChatPreviewServ {
     public int chatId;
     public String chatName;
     public String lastMessageTimestamp;
     public String lastMessage;
 
-    public Chat(int chatId, String chatName, String lastMessageTimestamp, String lastMessage) {
+    public ChatPreviewServ(int chatId, String chatName, String lastMessageTimestamp, String lastMessage) {
         this.chatId = chatId;
         this.chatName = chatName;
         this.lastMessageTimestamp = lastMessageTimestamp;
         this.lastMessage = lastMessage;
     }
 
-    public static List<Chat> getAllMessagesInChatsByUser(String userName) throws SQLException {
-        List<Chat> chats = new ArrayList<>();
+    public static List<ChatPreviewServ> getAllMessagesInChatsByUser(String userName) throws SQLException {
+        List<ChatPreviewServ> chats = new ArrayList<>();
 
         DatabaseConnection connectNow = new DatabaseConnection();
         Connection connectDB = connectNow.getConnection();
@@ -43,7 +42,7 @@ public class Chat {
         ResultSet result = statement.executeQuery();
 
         while (result.next()) {
-            chats.add(new Chat(
+            chats.add(new ChatPreviewServ(
                     result.getInt("id"),
                     result.getString("name"),
                     result.getString("timestamp"),
@@ -57,8 +56,8 @@ public class Chat {
         return chats;
     }
 
-    public static List<Chat> getChatPreviewByUser(String userName) throws SQLException {
-        List<Chat> chats = new ArrayList<>();
+    public static List<ChatPreviewServ> getChatPreviewByUser(String userName) throws SQLException {
+        List<ChatPreviewServ> chats = new ArrayList<>();
 
         DatabaseConnection connectNow = new DatabaseConnection();
         Connection connectDB = connectNow.getConnection();
@@ -81,7 +80,7 @@ public class Chat {
         ResultSet result = statement.executeQuery();
 
         while (result.next()) {
-            chats.add(new Chat(
+            chats.add(new ChatPreviewServ(
                     result.getInt("chat_id"),
                     result.getString("chat_name"),
                     result.getString("message_time"),

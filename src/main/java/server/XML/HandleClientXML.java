@@ -11,6 +11,10 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.w3c.dom.NodeList;
+
+import common.ChatPreviewServ;
+import common.MessageServ;
+
 import org.w3c.dom.Node;
 
 public class HandleClientXML {
@@ -28,8 +32,13 @@ public class HandleClientXML {
         switch (root.getTagName()) {
             case "getChatReviews" -> {
                 String userName = root.getAttribute("userName");
-                List<Chat> chats = Chat.getChatPreviewByUser(userName);
+                List<ChatPreviewServ> chats = ChatPreviewServ.getChatPreviewByUser(userName);
                 responseXml = ServerResponse.chatPreviewsRespond(chats);
+            }
+            case "getMessages" -> {
+                int chatId = Integer.parseInt(root.getAttribute("chatId"));
+                List<MessageServ> messages = MessageServ.getMessagesByChatId(chatId);
+                responseXml = ServerResponse.messagesResponse(messages);
             }
             case "sendMessage" -> {
                 NodeList children = root.getChildNodes();

@@ -8,19 +8,19 @@ import org.w3c.dom.NodeList;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
+import common.ChatPreview;
+import common.Message;
+
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import java.io.ByteArrayInputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class ClientRequest {
@@ -102,10 +102,11 @@ public class ClientRequest {
         return writer.toString() + "<END_OF_MESSAGE>";
     }
 
+    // PARSING XML
+
     public static List<ChatPreview> parseChatPreviews(String responseXml) {
         List<ChatPreview> chatPreviews = new ArrayList<>();
 
-        System.out.println("Parsing XML: " + responseXml);
         if (responseXml == null || responseXml.trim().isEmpty()) {
             System.err.println("responseXml is empty or null. Cannot parse.");
             return chatPreviews;
@@ -158,6 +159,56 @@ public class ClientRequest {
         }
 
         return chatPreviews;
+    }
+
+    public static List<Message> parseChatMessages(String responseXml) {
+        List<Message> messages = new ArrayList<>();
+
+        if (responseXml == null || responseXml.trim().isEmpty()) {
+            System.err.println("responseXml is empty or null. Cannot parse.");
+            return messages;
+        }
+
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+
+            // Удаляем возможный маркер <END_OF_MESSAGE>
+            responseXml = responseXml.replace("<END_OF_MESSAGE>", "").trim();
+
+            Document doc = builder.parse(new InputSource(new StringReader(responseXml)));
+            doc.getDocumentElement().normalize();
+
+            NodeList chatList = doc.getElementsByTagName("message");
+
+            for (int i = 0; i < chatList.getLength(); i++) {
+                Node chatNode = chatList.item(i);
+
+                if (chatNode.getNodeType() == Node.ELEMENT_NODE) {
+                    Element chatElement = (Element) chatNode;
+
+                    String content = getTagContent(chatElement, "content");
+                    String username = getTagContent(chatElement, "username");
+                    String timestampStr = getTagContent(chatElement, "lastMessageTimestamp");
+
+                    LocalDateTime lastTimestamp = null;
+                    try {
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSSSSS]");
+                        lastTimestamp = LocalDateTime.parse(timestampStr, formatter);
+                    } catch (Exception e) {
+                        System.err.println("Invalid timestamp format: " + e.getMessage());
+                    }
+
+                    Message message = new Message(content, username, lastTimestamp);
+                    messages.add(message);
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error parsing chat previews: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return messages;
     }
 
     // Вспомогательный метод для безопасного получения значения тега

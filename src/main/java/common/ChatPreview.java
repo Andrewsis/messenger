@@ -1,18 +1,18 @@
-package sample;
+package common;
 
 import java.time.LocalDateTime;
 
 public class ChatPreview {
-    private String chatName;
-    private String lastMessage;
-    private LocalDateTime timestamp;
     private int chatId;
+    private String chatName;
+    private LocalDateTime timestamp;
+    private String lastMessage;
 
     public ChatPreview(int chatId, String chatName, String lastMessage, LocalDateTime timestamp) {
-        this.chatName = chatName;
-        this.lastMessage = lastMessage;
-        this.timestamp = timestamp;
         this.chatId = chatId;
+        this.chatName = chatName;
+        this.timestamp = timestamp;
+        this.lastMessage = lastMessage;
     }
 
     public String getChatName() {

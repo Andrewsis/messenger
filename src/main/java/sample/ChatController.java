@@ -19,6 +19,9 @@ import java.net.Socket;
 import java.net.URL;
 import java.util.List;
 import java.util.ResourceBundle;
+
+import common.ChatPreview;
+import common.Message;
 import javafx.application.Platform;
 
 public class ChatController implements Initializable {
@@ -43,21 +46,37 @@ public class ChatController implements Initializable {
         }
     }
 
-    private void addMessageToChat(String message) {
-        Platform.runLater(() -> {
-            Label messageLabel = new Label(message);
-            messageLabel.setWrapText(true);
-            messageLabel.setStyle("-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
+    private void addMessageToChat(String responseXml) {
+        try {
+            List<Message> messages = ClientRequest.parseChatMessages(responseXml);
+            Platform.runLater(() -> {
+                messageContainer.getChildren().clear(); // очищаем старые сообщения
 
-            HBox messageBox = new HBox(messageLabel);
-            messageBox.setMaxWidth(messageContainer.getWidth());
-            messageBox.setStyle("-fx-alignment: top-right;");
+                for (Message msg : messages) {
+                    Label messageLabel = new Label(msg.getContent()); // или msg.getContent()
+                    messageLabel.setWrapText(true);
+                    messageLabel.setStyle("-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
 
-            messageContainer.getChildren().add(messageBox);
+                    HBox messageBox = new HBox(messageLabel);
+                    messageBox.setMaxWidth(messageContainer.getWidth());
 
-            scrollPane.layout();
-            scrollPane.setVvalue(1.0);
-        });
+                    // Выравнивание по отправителю
+                    if (msg.getUsername().equals(userName)) {
+                        messageBox.setStyle("-fx-alignment: top-right;");
+                    } else {
+                        messageBox.setStyle("-fx-alignment: top-left;");
+                    }
+
+                    messageContainer.getChildren().add(messageBox);
+                }
+
+                scrollPane.layout();
+                scrollPane.setVvalue(1.0);
+            });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void setClientConnection(String userName) {
@@ -71,17 +90,17 @@ public class ChatController implements Initializable {
             client.setOnMessageReceived(message -> {
                 Platform.runLater(() -> {
                     if (message.contains("<chatPreviews>")) {
-                        handleServerResponse(message);
+                        handleChatPreview(message);
                     } // если это XML с чатами
-                    else {
+                    else if (message.contains("<messages>")) {
                         addMessageToChat(message); // обычное сообщение
                     }
                 });
             });
             client.listenForMessage();
 
-            String requestXml = ClientRequest.getChatReviewsRequest(userName);
-            client.sendSystemMessage(requestXml);
+            String requestChatPreviewsXml = ClientRequest.getChatReviewsRequest(userName);
+            client.sendSystemMessage(requestChatPreviewsXml);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -126,11 +145,17 @@ public class ChatController implements Initializable {
             ChatPreview selectedItem = accountListView.getSelectionModel().getSelectedItem();
             if (selectedItem != null) {
                 int chatId = selectedItem.getChatId();
+                try {
+                    String requestMessagesXml = ClientRequest.getMessagesRequest(chatId);
+                    client.sendSystemMessage(requestMessagesXml);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         });
     }
 
-    private void handleServerResponse(String responseXml) {
+    private void handleChatPreview(String responseXml) {
         try {
             List<ChatPreview> chatPreviews = ClientRequest.parseChatPreviews(responseXml);
 
