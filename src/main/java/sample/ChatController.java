@@ -37,11 +37,20 @@ public class ChatController implements Initializable {
     private String chatName = null;
     private Client client = null;
     public String userName = null;
+    public int chatId = -1;
 
     public void sendButtonOnActivation(ActionEvent e) {
         String message = messageTextField.getText();
         if (!message.isEmpty()) {
-            client.sendMessage(message);
+            try {
+                String requestSendMessage = ClientRequest.sendMessageRequest(chatId, userName, message);
+                client.sendSystemMessage(requestSendMessage);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+
+            // client.sendMessage(message);
+
             messageTextField.clear();
         }
     }
@@ -50,7 +59,7 @@ public class ChatController implements Initializable {
         try {
             List<Message> messages = ClientRequest.parseChatMessages(responseXml);
             Platform.runLater(() -> {
-                messageContainer.getChildren().clear(); // очищаем старые сообщения
+                // messageContainer.getChildren().clear(); // очищаем старые сообщения
 
                 for (Message msg : messages) {
                     Label messageLabel = new Label(msg.getContent()); // или msg.getContent()
@@ -86,6 +95,8 @@ public class ChatController implements Initializable {
         try {
             Socket socket = new Socket(Constants.IP_ADDR, Constants.PORT);
             this.client = new Client(socket, this.userName);
+            String loginXml = ClientRequest.sendLogin(this.userName);
+            client.sendSystemMessage(loginXml);
 
             client.setOnMessageReceived(message -> {
                 Platform.runLater(() -> {
@@ -141,12 +152,15 @@ public class ChatController implements Initializable {
             }
         });
 
+        // download messages for selected chat
         accountListView.setOnMouseClicked(event -> {
             ChatPreview selectedItem = accountListView.getSelectionModel().getSelectedItem();
             if (selectedItem != null) {
-                int chatId = selectedItem.getChatId();
+                chatId = selectedItem.getChatId();
                 try {
                     String requestMessagesXml = ClientRequest.getMessagesRequest(chatId);
+                    messageContainer.getChildren().clear();
+
                     client.sendSystemMessage(requestMessagesXml);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -157,8 +171,11 @@ public class ChatController implements Initializable {
 
     private void handleChatPreview(String responseXml) {
         try {
+            System.out.println("HANDLING CHAT PREVIEWS: " + responseXml);
             List<ChatPreview> chatPreviews = ClientRequest.parseChatPreviews(responseXml);
 
+            System.out.println("chill");
+            System.out.println("Chat previews: " + chatPreviews);
             // Обновляем список чатов в интерфейсе
             accountListView.getItems().clear();
             accountListView.getItems().addAll(chatPreviews);

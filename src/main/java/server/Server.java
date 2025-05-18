@@ -6,26 +6,37 @@ import java.net.Socket;
 import java.util.ArrayList;
 
 public class Server {
-    private ArrayList<ClientHandler> clients = new ArrayList<>();
-    private int client_count = 0;
+    private static Server instance; // Singleton instance
 
-    public Server() throws IOException {
+    private static ArrayList<ClientHandler> clients = new ArrayList<>();
+    private static int client_count = 0;
+
+    private Server() {
+    }
+
+    public static Server getInstance() {
+        if (instance == null) {
+            instance = new Server();
+        }
+        return instance;
+    }
+
+    public static ArrayList<ClientHandler> getClients() {
+        return clients;
+    }
+
+    public void start() throws IOException {
         ServerSocket serverSocket = new ServerSocket(Constants.PORT);
         System.out.println("Server has started");
-        Socket clientSocket = null;
-        try {
-            while (true) {
-                clientSocket = serverSocket.accept();
-                System.out.println("Connection established");
 
-                ClientHandler clientHandler = new ClientHandler(clientSocket, this);
-                clients.add(clientHandler);
+        while (true) {
+            Socket clientSocket = serverSocket.accept();
+            System.out.println("Connection established");
 
-                Thread thread = new Thread(clientHandler);
-                thread.start();
-            }
-        } catch (IOException e) {
+            ClientHandler clientHandler = new ClientHandler(clientSocket);
+            clients.add(clientHandler);
 
+            new Thread(clientHandler).start();
         }
     }
 
@@ -57,13 +68,16 @@ public class Server {
         }
     }
 
-    // public void removeClient(ClientHandler clientHandler) {
-    // clients.remove(clientHandler);
-    // sendMessageToAllClients("SERVER: User " + clientHandler.userName + " has
-    // leaved the chat(");
-    // }
+    public void sendMessageToChat(String message, int chatId) {
+        for (ClientHandler client : clients) {
+            if (client.isInChat(chatId)) {
+                System.out.println("Sending message to client in chat " + chatId);
+                client.sendMessage(message);
+            }
+        }
+    }
 
     public static void main(String[] args) throws IOException {
-        Server server = new Server();
+        Server.getInstance().start();
     }
 }

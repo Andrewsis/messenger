@@ -6,14 +6,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.*;
 
 import common.ChatPreviewServ;
-import common.ChatPreview;
 import common.MessageServ;
 
-import javax.xml.parsers.*;
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -124,7 +118,7 @@ public class ServerResponse {
 
     public static void main(String[] args) throws Exception {
         // Пример ответа на запрос сообщений
-        List<ChatPreviewServ> chats = ChatPreviewServ.getChatPreviewByUser("vanya");
+        List<ChatPreviewServ> chats = ChatPreviewServ.getChatPreview("vanya");
         // String responseXml = messagesResponse(chats);
         // System.out.println(responseXml);
 

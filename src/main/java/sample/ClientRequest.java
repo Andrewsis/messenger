@@ -22,6 +22,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 
 public class ClientRequest {
     public static String getMessagesRequest(Integer chatId) throws Exception {
@@ -47,33 +49,20 @@ public class ClientRequest {
     }
 
     public static String sendMessageRequest(Integer chatId, String sender, String content) throws Exception {
-        // Создаем объект DocumentBuilder
+
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
 
-        // Создаем новый документ
         Document doc = builder.newDocument();
 
-        // Создаем элемент запроса
         Element sendMessage = doc.createElement("sendMessage");
 
-        // Добавляем вложенные элементы
-        Element chatIdElement = doc.createElement("chatId");
-        chatIdElement.appendChild(doc.createTextNode(chatId.toString())); // Преобразуем Integer в String
-        sendMessage.appendChild(chatIdElement);
+        sendMessage.setAttribute("chatId", chatId.toString());
+        sendMessage.setAttribute("sender", sender);
+        sendMessage.setAttribute("content", content);
 
-        Element senderElement = doc.createElement("sender");
-        senderElement.appendChild(doc.createTextNode(sender));
-        sendMessage.appendChild(senderElement);
-
-        Element contentElement = doc.createElement("content");
-        contentElement.appendChild(doc.createTextNode(content));
-        sendMessage.appendChild(contentElement);
-
-        // Добавляем элемент в корень документа
         doc.appendChild(sendMessage);
 
-        // Преобразуем документ в строку
         Transformer transformer = TransformerFactory.newInstance().newTransformer();
         StringWriter writer = new StringWriter();
         transformer.transform(new DOMSource(doc), new StreamResult(writer));
@@ -102,6 +91,27 @@ public class ClientRequest {
         return writer.toString() + "<END_OF_MESSAGE>";
     }
 
+    public static String sendLogin(String userName) throws Exception {
+        // Создаем объект DocumentBuilder
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+
+        // Создаем новый документ
+        Document doc = builder.newDocument();
+
+        // Создаем элемент запроса
+        Element login = doc.createElement("login");
+        login.setAttribute("userName", userName);
+
+        // Добавляем элемент в корень документа
+        doc.appendChild(login);
+
+        // Преобразуем документ в строку
+        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(writer));
+        return writer.toString() + "<END_OF_MESSAGE>";
+    }
     // PARSING XML
 
     public static List<ChatPreview> parseChatPreviews(String responseXml) {
@@ -142,7 +152,12 @@ public class ClientRequest {
 
                     LocalDateTime lastTimestamp = null;
                     try {
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSSSSS]");
+                        DateTimeFormatter formatter = new DateTimeFormatterBuilder()
+                                .appendPattern("yyyy-MM-dd HH:mm:ss")
+                                .optionalStart()
+                                .appendFraction(ChronoField.NANO_OF_SECOND, 1, 9, true)
+                                .optionalEnd()
+                                .toFormatter();
                         lastTimestamp = LocalDateTime.parse(timestampStr, formatter);
                     } catch (Exception e) {
                         System.err.println("Invalid timestamp format: " + e.getMessage());
@@ -174,7 +189,7 @@ public class ClientRequest {
             DocumentBuilder builder = factory.newDocumentBuilder();
 
             // Удаляем возможный маркер <END_OF_MESSAGE>
-            responseXml = responseXml.replace("<END_OF_MESSAGE>", "").trim();
+            // responseXml = responseXml.replace("<END_OF_MESSAGE>", "").trim();
 
             Document doc = builder.parse(new InputSource(new StringReader(responseXml)));
             doc.getDocumentElement().normalize();

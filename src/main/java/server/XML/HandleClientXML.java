@@ -10,12 +10,8 @@ import java.util.List;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.w3c.dom.NodeList;
-
 import common.ChatPreviewServ;
 import common.MessageServ;
-
-import org.w3c.dom.Node;
 
 public class HandleClientXML {
     public static String processXml(String xmlString) throws Exception {
@@ -30,34 +26,26 @@ public class HandleClientXML {
         String responseXml;
 
         switch (root.getTagName()) {
+            case "login" -> {
+                responseXml = ServerResponse.statusResponse(200, "Login successful");
+            }
             case "getChatReviews" -> {
                 String userName = root.getAttribute("userName");
-                List<ChatPreviewServ> chats = ChatPreviewServ.getChatPreviewByUser(userName);
+                List<ChatPreviewServ> chats = ChatPreviewServ.getChatPreview(userName);
                 responseXml = ServerResponse.chatPreviewsRespond(chats);
             }
             case "getMessages" -> {
                 int chatId = Integer.parseInt(root.getAttribute("chatId"));
-                List<MessageServ> messages = MessageServ.getMessagesByChatId(chatId);
+                List<MessageServ> messages = MessageServ.getMessages(chatId);
                 responseXml = ServerResponse.messagesResponse(messages);
             }
             case "sendMessage" -> {
-                NodeList children = root.getChildNodes();
-                int chatId = 0;
-                String sender = "", content = "";
+                int chatId = Integer.parseInt(root.getAttribute("chatId"));
+                String sender = root.getAttribute("sender");
+                String content = root.getAttribute("content");
+                List<MessageServ> messages = MessageServ.sendMessage(chatId, content, sender);
 
-                for (int i = 0; i < children.getLength(); i++) {
-                    Node node = children.item(i);
-                    if (node.getNodeType() == Node.ELEMENT_NODE) {
-                        switch (node.getNodeName()) {
-                            case "chatId" -> chatId = Integer.parseInt(node.getTextContent());
-                            case "sender" -> sender = node.getTextContent();
-                            case "content" -> content = node.getTextContent();
-                        }
-                    }
-                }
-
-                // saveMessage(chatId, sender, content); // Сохраняем сообщение в БД
-                responseXml = ServerResponse.statusResponse(200, "Message delivered"); // Успешный ответ
+                responseXml = ServerResponse.messagesResponse(messages);
             }
             default -> {
                 responseXml = ServerResponse.statusResponse(400, "Unknown request type");
@@ -65,6 +53,6 @@ public class HandleClientXML {
         }
 
         // Отправка XML-ответа
-        return responseXml;
+        return responseXml + "<END_OF_MESSAGE>";
     }
 }

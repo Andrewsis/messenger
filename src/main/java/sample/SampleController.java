@@ -57,6 +57,7 @@ public class SampleController {
             while (queryResult.next()) {
                 if (queryResult.getInt(1) == 1) {
                     loginMessage_label.setText("Welcome " + username + "!");
+
                     try {
                         FXMLLoader loader = new FXMLLoader(getClass().getResource("/chat.fxml"));
                         Parent root = loader.load();

@@ -56,7 +56,7 @@ public class ChatPreviewServ {
         return chats;
     }
 
-    public static List<ChatPreviewServ> getChatPreviewByUser(String userName) throws SQLException {
+    public static List<ChatPreviewServ> getChatPreview(String userName) throws SQLException {
         List<ChatPreviewServ> chats = new ArrayList<>();
 
         DatabaseConnection connectNow = new DatabaseConnection();

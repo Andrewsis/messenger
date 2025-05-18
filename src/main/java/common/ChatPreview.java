@@ -3,10 +3,10 @@ package common;
 import java.time.LocalDateTime;
 
 public class ChatPreview {
-    private int chatId;
-    private String chatName;
-    private LocalDateTime timestamp;
-    private String lastMessage;
+    public int chatId;
+    public String chatName;
+    public LocalDateTime timestamp;
+    public String lastMessage;
 
     public ChatPreview(int chatId, String chatName, String lastMessage, LocalDateTime timestamp) {
         this.chatId = chatId;
@@ -33,6 +33,6 @@ public class ChatPreview {
 
     @Override
     public String toString() {
-        return chatName + ": " + lastMessage;
+        return chatName + ": " + lastMessage + " (" + timestamp + ")";
     }
 }

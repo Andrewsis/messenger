@@ -1,34 +1,73 @@
 package server;
 
-import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.Scanner;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
 import server.XML.HandleClientXML;
 
 public class ClientHandler implements Runnable {
-    private Server server;
-
+    private String userName = null;
     private Socket clientSocket = null;
 
     private PrintWriter outMessage;
     private Scanner inMessage;
 
-    public ClientHandler(Socket socket, Server server) {
+    public ClientHandler(Socket socket) {
         try {
-            server.increaseByOneClientCount();
+            Server.getInstance().increaseByOneClientCount();
 
-            this.server = server;
             this.clientSocket = socket;
             this.outMessage = new PrintWriter(socket.getOutputStream(), true);
-            this.inMessage = new Scanner(socket.getInputStream());
+            this.inMessage = new Scanner(socket.getInputStream(), StandardCharsets.UTF_8);
+            this.inMessage.useDelimiter("<END_OF_MESSAGE>");
         } catch (IOException e) {
             closeEverything(clientSocket, inMessage, outMessage);
         }
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public boolean isInChat(int chatId) {
+        if (userName == null)
+            return false;
+        // Пример для JDBC
+        DatabaseConnection connectNow = null;
+        try {
+            connectNow = new DatabaseConnection();
+            try (
+                    Connection connectDB = connectNow.getConnection();
+                    PreparedStatement stmt = connectDB.prepareStatement(
+                            """
+                                    SELECT COUNT(*)
+                                    FROM chat_participants c
+                                    JOIN user_accounts ON c.user_id = user_accounts.id
+                                    WHERE c.chat_id = ? AND user_accounts.username = ?
+                                            """)) {
+                stmt.setInt(1, chatId);
+                stmt.setString(2, userName);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     public void closeEverything(Socket socket, Scanner scanner, PrintWriter printWriter) {
@@ -50,35 +89,63 @@ public class ClientHandler implements Runnable {
 
     public void closeConnection() {
         // server.removeClient(this);
-        server.decreaseByOneClientCount();
-        server.sendMessageToAllClients(server.getClientCount() + "");
+        Server.getInstance().decreaseByOneClientCount();
+        Server.getInstance().sendMessageToAllClients(Server.getInstance().getClientCount() + "");
     }
 
     public void sendMessage(String message) {
         outMessage.println(message);
     }
 
-    public void sendPersonalMessage(String message, ClientHandler client) {
-        client.outMessage.println(message);
+    private String extractUserNameFromXml(String xml) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+            Element root = doc.getDocumentElement();
+            return root.getAttribute("userName");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private int extractChatId(String xml) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+            Element root = doc.getDocumentElement();
+            return Integer.parseInt(root.getAttribute("chatId"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return -1;
+        }
     }
 
     @Override
     public void run() {
-        try (
-                InputStream inputStream = clientSocket.getInputStream();
-                OutputStream outputStream = clientSocket.getOutputStream()) {
-            Scanner scanner = new Scanner(inputStream, StandardCharsets.UTF_8);
-            scanner.useDelimiter("<END_OF_MESSAGE>"); // Устанавливаем маркер окончания сообщения
-
-            while (!clientSocket.isClosed() && scanner.hasNext()) {
-                String clientXml = scanner.next().trim();
+        try {
+            while (!clientSocket.isClosed() && inMessage.hasNext()) {
+                String clientXml = inMessage.next().trim();
                 System.out.println("Received on server XML:\n" + clientXml);
+
+                if (userName == null && clientXml.contains("<login")) {
+                    this.userName = extractUserNameFromXml(clientXml);
+                    System.out.println("User logged in: " + userName);
+                }
 
                 String responseXml = HandleClientXML.processXml(clientXml);
 
-                responseXml += "<END_OF_MESSAGE>";
-                outputStream.write(responseXml.getBytes(StandardCharsets.UTF_8));
-                outputStream.flush();
+                if (clientXml.contains("<sendMessage")) {
+                    int chatId = extractChatId(clientXml);
+                    // Рассылаем ответ всем участникам чата
+                    Server.getInstance().sendMessageToChat(responseXml, chatId);
+                } else {
+                    System.out.println("Sending response to client: " + responseXml);
+                    outMessage.print(responseXml);
+                    outMessage.flush();
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
