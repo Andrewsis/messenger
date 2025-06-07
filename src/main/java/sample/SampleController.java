@@ -46,18 +46,19 @@ public class SampleController {
         DatabaseConnection connectNow = new DatabaseConnection();
         Connection connectDB = connectNow.getConnection();
         String username = username_textField.getText();
+        String password = password_passwordField.getText();
 
-        String verifyLogin = "SELECT count(1) FROM user_accounts WHERE username = '" + username
-                + "' AND password = '" + password_passwordField.getText() + "'";
+        String checkUser = "SELECT password FROM user_accounts WHERE username = '" + username + "'";
 
         try {
             Statement statement = connectDB.createStatement();
-            ResultSet queryResult = statement.executeQuery(verifyLogin);
+            ResultSet resultSet = statement.executeQuery(checkUser);
 
-            while (queryResult.next()) {
-                if (queryResult.getInt(1) == 1) {
-                    loginMessage_label.setText("Welcome " + username + "!");
-
+            if (resultSet.next()) {
+                // User exists, check password
+                String dbPassword = resultSet.getString("password");
+                if (dbPassword.equals(password)) {
+                    // Correct password, proceed to chat
                     try {
                         FXMLLoader loader = new FXMLLoader(getClass().getResource("/chat.fxml"));
                         Parent root = loader.load();
@@ -72,9 +73,29 @@ public class SampleController {
                         e.printStackTrace();
                         loginMessage_label.setText("Failed to load chat scene.");
                     }
-
                 } else {
-                    loginMessage_label.setText("Invalid Login or password");
+                    // Wrong password
+                    loginMessage_label.setText("Wrong password.");
+                }
+            } else {
+                // User does not exist, create new user
+                String addUser = "INSERT INTO user_accounts (username, password) VALUES ('"
+                        + username + "', '" + password + "')";
+                statement.executeUpdate(addUser);
+
+                try {
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/chat.fxml"));
+                    Parent root = loader.load();
+
+                    ChatController chatController = loader.getController();
+                    chatController.setClientConnection(username);
+
+                    Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+                    stage.setScene(new Scene(root));
+                    stage.show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    loginMessage_label.setText("Failed to load chat scene.");
                 }
             }
         } catch (Exception e) {

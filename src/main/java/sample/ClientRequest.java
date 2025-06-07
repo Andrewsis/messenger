@@ -91,7 +91,7 @@ public class ClientRequest {
         return writer.toString() + "<END_OF_MESSAGE>";
     }
 
-    public static String sendLogin(String userName) throws Exception {
+    public static String getAllUsersRequest() throws Exception {
         // Создаем объект DocumentBuilder
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
@@ -100,11 +100,10 @@ public class ClientRequest {
         Document doc = builder.newDocument();
 
         // Создаем элемент запроса
-        Element login = doc.createElement("login");
-        login.setAttribute("userName", userName);
+        Element getAllUsers = doc.createElement("getAllUsers");
 
         // Добавляем элемент в корень документа
-        doc.appendChild(login);
+        doc.appendChild(getAllUsers);
 
         // Преобразуем документ в строку
         Transformer transformer = TransformerFactory.newInstance().newTransformer();
@@ -112,6 +111,45 @@ public class ClientRequest {
         transformer.transform(new DOMSource(doc), new StreamResult(writer));
         return writer.toString() + "<END_OF_MESSAGE>";
     }
+
+    public static String sendLoginRequest(String userName) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+
+        Document doc = builder.newDocument();
+
+        Element login = doc.createElement("login");
+        login.setAttribute("userName", userName);
+
+        doc.appendChild(login);
+
+        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(writer));
+        return writer.toString() + "<END_OF_MESSAGE>";
+    }
+
+    public static String createChatRequest(String ourUsername, String otherUsername, String chatName, String chatDesc)
+            throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+
+        Document doc = builder.newDocument();
+
+        Element createChat = doc.createElement("createChat");
+        createChat.setAttribute("ourUsername", ourUsername);
+        createChat.setAttribute("otherUsername", otherUsername);
+        createChat.setAttribute("chatName", chatName);
+        createChat.setAttribute("chatDesc", chatDesc);
+
+        doc.appendChild(createChat);
+
+        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(writer));
+        return writer.toString() + "<END_OF_MESSAGE>";
+    }
+
     // PARSING XML
 
     public static List<ChatPreview> parseChatPreviews(String responseXml) {
@@ -188,9 +226,6 @@ public class ClientRequest {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
 
-            // Удаляем возможный маркер <END_OF_MESSAGE>
-            // responseXml = responseXml.replace("<END_OF_MESSAGE>", "").trim();
-
             Document doc = builder.parse(new InputSource(new StringReader(responseXml)));
             doc.getDocumentElement().normalize();
 
@@ -226,6 +261,43 @@ public class ClientRequest {
         return messages;
     }
 
+    public static List<String> parseAllUsers(String responseXml) {
+        List<String> users = new ArrayList<>();
+
+        if (responseXml == null || responseXml.trim().isEmpty()) {
+            System.err.println("responseXml is empty or null. Cannot parse.");
+            return users;
+        }
+
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+
+            // Удаляем возможный маркер <END_OF_MESSAGE>
+            responseXml = responseXml.replace("<END_OF_MESSAGE>", "").trim();
+
+            Document doc = builder.parse(new InputSource(new StringReader(responseXml)));
+            doc.getDocumentElement().normalize();
+
+            NodeList usernameList = doc.getElementsByTagName("username");
+
+            for (int i = 0; i < usernameList.getLength(); i++) {
+                Node usernameNode = usernameList.item(i);
+                if (usernameNode.getNodeType() == Node.ELEMENT_NODE) {
+                    String username = usernameNode.getTextContent();
+                    if (username != null && !username.trim().isEmpty()) {
+                        users.add(username.trim());
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error parsing users: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return users;
+    }
+
     // Вспомогательный метод для безопасного получения значения тега
     private static String getTagContent(Element element, String tagName) {
         Node node = element.getElementsByTagName(tagName).item(0);
@@ -233,7 +305,7 @@ public class ClientRequest {
     }
 
     public static void main(String[] args) throws Exception {
-        Integer chatId = 1; // пример с Integer
+        Integer chatId = 1;
         String requestXml = getMessagesRequest(chatId);
         System.out.println(requestXml);
     }

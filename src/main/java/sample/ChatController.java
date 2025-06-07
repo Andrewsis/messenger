@@ -3,12 +3,15 @@ package sample;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
 import javafx.scene.layout.HBox;
 import server.Client;
 import server.Constants;
@@ -23,6 +26,7 @@ import java.util.ResourceBundle;
 import common.ChatPreview;
 import common.Message;
 import javafx.application.Platform;
+import javafx.stage.Stage;
 
 public class ChatController implements Initializable {
     @FXML
@@ -38,6 +42,70 @@ public class ChatController implements Initializable {
     private Client client = null;
     public String userName = null;
     public int chatId = -1;
+
+    public void addChatButtonOnActivation(ActionEvent e) {
+        try {
+            String requestAllUsersFromDB = ClientRequest.getAllUsersRequest();
+            client.sendSystemMessage(requestAllUsersFromDB);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    // Вызывайте этот метод, когда получите XML <users>...</users> с сервера
+    private void showUsersForNewChat(String usersXml) {
+        try {
+            List<String> users = ClientRequest.parseAllUsers(usersXml);
+            users.remove(userName); // убираем себя из списка
+
+            Stage stage = new Stage();
+            stage.setTitle("Создать новый чат");
+
+            VBox vbox = new VBox();
+            vbox.setPadding(new Insets(10));
+            vbox.setSpacing(10);
+
+            // Поля для ввода названия и описания чата
+            TextField chatNameField = new TextField();
+            chatNameField.setPromptText("Название чата");
+
+            TextField chatDescField = new TextField();
+            chatDescField.setPromptText("Описание чата");
+
+            vbox.getChildren().addAll(chatNameField, chatDescField);
+
+            for (String user : users) {
+                Label userLabel = new Label(user);
+                userLabel.setStyle("-fx-background-color: #f0f0f0; -fx-padding: 8; -fx-background-radius: 8;");
+                userLabel.setMaxWidth(Double.MAX_VALUE);
+
+                userLabel.setOnMouseClicked(event -> {
+                    try {
+                        String chatNameInput = chatNameField.getText().trim();
+                        String chatDescInput = chatDescField.getText().trim();
+                        String requestXml = ClientRequest.createChatRequest(userName, user,
+                                chatNameInput, chatDescInput);
+                        client.sendSystemMessage(requestXml);
+
+                        requestXml = ClientRequest.getChatReviewsRequest(userName);
+                        client.sendSystemMessage(requestXml);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                    stage.close();
+                });
+
+                vbox.getChildren().add(userLabel);
+            }
+
+            Scene scene = new Scene(vbox, 300, 400);
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.showAndWait();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     public void sendButtonOnActivation(ActionEvent e) {
         String message = messageTextField.getText();
@@ -95,7 +163,7 @@ public class ChatController implements Initializable {
         try {
             Socket socket = new Socket(Constants.IP_ADDR, Constants.PORT);
             this.client = new Client(socket, this.userName);
-            String loginXml = ClientRequest.sendLogin(this.userName);
+            String loginXml = ClientRequest.sendLoginRequest(this.userName);
             client.sendSystemMessage(loginXml);
 
             client.setOnMessageReceived(message -> {
@@ -105,6 +173,8 @@ public class ChatController implements Initializable {
                     } // если это XML с чатами
                     else if (message.contains("<messages>")) {
                         addMessageToChat(message); // обычное сообщение
+                    } else if (message.contains("<users>")) {
+                        showUsersForNewChat(message); // обычное сообщение
                     }
                 });
             });

@@ -12,6 +12,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import common.ChatPreviewServ;
 import common.MessageServ;
+import sample.ClientRequest;
 
 public class HandleClientXML {
     public static String processXml(String xmlString) throws Exception {
@@ -32,12 +33,22 @@ public class HandleClientXML {
             case "getChatReviews" -> {
                 String userName = root.getAttribute("userName");
                 List<ChatPreviewServ> chats = ChatPreviewServ.getChatPreview(userName);
-                responseXml = ServerResponse.chatPreviewsRespond(chats);
+                responseXml = ServerResponse.getChatReviewsResponse(chats);
+            }
+            case "getAllUsers" -> {
+                responseXml = ServerResponse.getAllUsersResponse();
             }
             case "getMessages" -> {
                 int chatId = Integer.parseInt(root.getAttribute("chatId"));
                 List<MessageServ> messages = MessageServ.getMessages(chatId);
-                responseXml = ServerResponse.messagesResponse(messages);
+                responseXml = ServerResponse.getMessagesResponse(messages);
+            }
+            case "createChat" -> {
+                String ourUsername = root.getAttribute("ourUsername");
+                String otherUsername = root.getAttribute("otherUsername");
+                String chatName = root.getAttribute("chatName");
+                String chatDesc = root.getAttribute("chatDesc");
+                responseXml = ServerResponse.createChatResponse(ourUsername, otherUsername, chatName, chatDesc);
             }
             case "sendMessage" -> {
                 int chatId = Integer.parseInt(root.getAttribute("chatId"));
@@ -45,7 +56,7 @@ public class HandleClientXML {
                 String content = root.getAttribute("content");
                 List<MessageServ> messages = MessageServ.sendMessage(chatId, content, sender);
 
-                responseXml = ServerResponse.messagesResponse(messages);
+                responseXml = ServerResponse.getMessagesResponse(messages);
             }
             default -> {
                 responseXml = ServerResponse.statusResponse(400, "Unknown request type");
