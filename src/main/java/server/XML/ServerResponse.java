@@ -73,10 +73,13 @@ public class ServerResponse {
         doc.appendChild(chatsElem);
 
         Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
 
         StringWriter writer = new StringWriter();
         transformer.transform(new DOMSource(doc), new StreamResult(writer));
         return writer.toString();
+
     }
 
     public static String getAllUsersResponse() throws Exception {

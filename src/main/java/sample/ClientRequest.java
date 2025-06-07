@@ -243,7 +243,7 @@ public class ClientRequest {
 
                     LocalDateTime lastTimestamp = null;
                     try {
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSSSSS]");
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS]");
                         lastTimestamp = LocalDateTime.parse(timestampStr, formatter);
                     } catch (Exception e) {
                         System.err.println("Invalid timestamp format: " + e.getMessage());

@@ -125,16 +125,28 @@ public class ChatController implements Initializable {
 
     private void addMessageToChat(String responseXml) {
         try {
+            System.out.println("Received on ChatController XML:\n" + responseXml);
             List<Message> messages = ClientRequest.parseChatMessages(responseXml);
             Platform.runLater(() -> {
                 // messageContainer.getChildren().clear(); // очищаем старые сообщения
 
                 for (Message msg : messages) {
-                    Label messageLabel = new Label(msg.getContent()); // или msg.getContent()
+                    // Форматируем время
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+                    String timeText = msg.getTimestamp().format(formatter);
+
+                    // Формируем подпись: имя пользователя и время
+                    Label metaLabel = new Label(msg.getUsername() + " • " + timeText);
+                    metaLabel.setStyle("-fx-font-size: 10; -fx-text-fill: gray;");
+
+                    Label messageLabel = new Label(msg.getContent());
                     messageLabel.setWrapText(true);
                     messageLabel.setStyle("-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
 
-                    HBox messageBox = new HBox(messageLabel);
+                    VBox messageVBox = new VBox(metaLabel, messageLabel);
+                    messageVBox.setSpacing(2);
+
+                    HBox messageBox = new HBox(messageVBox);
                     messageBox.setMaxWidth(messageContainer.getWidth());
 
                     // Выравнивание по отправителю
