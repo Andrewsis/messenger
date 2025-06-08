@@ -128,7 +128,7 @@ public class ClientHandler implements Runnable {
         try {
             while (!clientSocket.isClosed() && inMessage.hasNext()) {
                 String clientXml = inMessage.next().trim();
-                System.out.println("Received on server XML:\n" + clientXml);
+                // System.out.println("Received on server XML:\n" + clientXml);
 
                 if (userName == null && clientXml.contains("<login")) {
                     this.userName = extractUserNameFromXml(clientXml);

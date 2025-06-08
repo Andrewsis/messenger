@@ -13,6 +13,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import common.ChatPreviewServ;
 import common.GroupInfoServ;
 import common.MessageServ;
+import server.ClientHandler;
+import server.Server;
 
 public class HandleClientXML {
     public static String processXml(String xmlString) throws Exception {
@@ -68,12 +70,30 @@ public class HandleClientXML {
                 int chatId = Integer.parseInt(root.getAttribute("chatId"));
 
                 responseXml = ServerResponse.removeUserFromChatResponse(username, chatId);
+                // После успешного удаления пользователя из чата
+                for (ClientHandler client : Server.getClients()) {
+                    if (client.getUserName().equals(username)) {
+                        String chatPreviewsXml = ServerResponse.getChatReviewsResponse(
+                                ChatPreviewServ.getChatPreview(username));
+                        client.sendMessage(chatPreviewsXml + "<END_OF_MESSAGE>");
+                        break;
+                    }
+                }
             }
             case "addUser" -> {
                 String username = root.getAttribute("username");
                 int chatId = Integer.parseInt(root.getAttribute("chatId"));
 
                 responseXml = ServerResponse.addUserToChatResponse(username, chatId);
+
+                for (ClientHandler client : Server.getClients()) {
+                    if (client.getUserName().equals(username)) {
+                        List<ChatPreviewServ> chats = ChatPreviewServ.getChatPreview(username);
+                        String chatPreviewsXml = ServerResponse.getChatReviewsResponse(chats);
+                        client.sendMessage(chatPreviewsXml + "<END_OF_MESSAGE>");
+                        break;
+                    }
+                }
             }
             default -> {
                 responseXml = ServerResponse.statusResponse(400, "Unknown request type");

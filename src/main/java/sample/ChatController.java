@@ -6,6 +6,7 @@ import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -44,6 +45,8 @@ public class ChatController implements Initializable {
     private Label groupName;
     @FXML
     private VBox groupInfoVBox;
+    @FXML
+    private javafx.scene.control.Button scrollToBottomButton;
 
     private String chatName = null;
     private Client client = null;
@@ -114,12 +117,22 @@ public class ChatController implements Initializable {
                 sendButtonOnActivation(new ActionEvent()); // вызываем тот же метод
             }
         });
+        // Also allow scrolling to bottom when chat area is focused and DOWN is pressed
+        scrollPane.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.DOWN && event.isControlDown()) {
+                Platform.runLater(() -> scrollPane.setVvalue(1.0));
+            }
+            if (event.getCode() == KeyCode.UP && event.isControlDown()) {
+                Platform.runLater(() -> scrollPane.setVvalue(0.0));
+            }
+        });
 
         // download messages for selected chat
         accountListView.setOnMouseClicked(event -> {
             ChatPreview selectedItem = accountListView.getSelectionModel().getSelectedItem();
             if (selectedItem != null) {
                 chatId = selectedItem.getChatId();
+                messageTextField.setDisable(false);
                 try {
                     String requestMessagesXml = ClientRequest.getMessagesRequest(chatId);
                     messageContainer.getChildren().clear();
@@ -218,11 +231,9 @@ public class ChatController implements Initializable {
 
     private void addMessageToChat(String responseXml) {
         try {
-            System.out.println("Received on ChatController XML:\n" + responseXml);
+            // System.out.println("Received on ChatController XML:\n" + responseXml);
             List<Message> messages = ClientRequest.parseChatMessages(responseXml);
             Platform.runLater(() -> {
-                // messageContainer.getChildren().clear(); // очищаем старые сообщения
-
                 for (Message msg : messages) {
                     // Форматируем время
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
@@ -251,8 +262,7 @@ public class ChatController implements Initializable {
 
                     messageContainer.getChildren().add(messageBox);
                 }
-
-                scrollPane.layout();
+                // Прокручиваем вниз после добавления новых сообщений
                 scrollPane.setVvalue(1.0);
             });
 
@@ -301,12 +311,20 @@ public class ChatController implements Initializable {
 
     private void handleChatPreview(String responseXml) {
         try {
-            System.out.println("HANDLING CHAT PREVIEWS: " + responseXml);
             List<ChatPreview> chatPreviews = ClientRequest.parseChatPreviews(responseXml);
 
-            System.out.println("chill");
-            System.out.println("Chat previews: " + chatPreviews);
-            // Обновляем список чатов в интерфейсе
+            // Проверяем, остался ли выбранный чат в списке
+            boolean chatExists = chatPreviews.stream().anyMatch(c -> c.getChatId() == chatId);
+            if (!chatExists) {
+                chatId = -1;
+                messageContainer.getChildren().clear();
+                messageTextField.setDisable(true);
+                groupName.setText("");
+                membersLabel.setText("");
+            } else {
+                messageTextField.setDisable(false);
+            }
+
             accountListView.getItems().clear();
             accountListView.getItems().addAll(chatPreviews);
 

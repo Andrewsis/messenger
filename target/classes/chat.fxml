@@ -14,7 +14,7 @@
       <AnchorPane maxHeight="1.7976931348623157E308" maxWidth="-Infinity" minWidth="-Infinity" prefHeight="410.0" prefWidth="190.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="0.0">
          <children>
             <ListView fx:id="accountListView" fixedCellSize="60.0" layoutY="42.4" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="370.0" prefWidth="190.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="40.0" />
-            <Button fx:id="addChatButton" maxHeight="40.0" maxWidth="190.0" minHeight="40.0" minWidth="190.0" mnemonicParsing="false" onAction="#createChatButtonOnActivation" prefHeight="40.0" prefWidth="190.0" text="Add new chat" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+            <Button fx:id="createChatButton" maxHeight="40.0" maxWidth="190.0" minHeight="40.0" minWidth="190.0" mnemonicParsing="false" onAction="#createChatButtonOnActivation" prefHeight="40.0" prefWidth="190.0" text="Add new chat" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
          </children></AnchorPane>
       <AnchorPane layoutX="190.0" maxWidth="1.7976931348623157E308" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="190.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
          <children>
