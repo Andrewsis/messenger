@@ -39,6 +39,18 @@ import java.io.ByteArrayOutputStream;
 import javafx.scene.layout.StackPane;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import javafx.scene.control.Button;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.FlowPane;
+import javafx.stage.Popup;
+import javafx.scene.text.Text;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.FontPosture;
+import javafx.scene.text.TextFlow;
+import javafx.scene.paint.Color;
+import javafx.scene.control.Hyperlink;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ChatController implements Initializable {
     @FXML
@@ -57,6 +69,9 @@ public class ChatController implements Initializable {
     private VBox groupInfoVBox;
     @FXML
     private javafx.scene.control.Button scrollToBottomButton;
+
+    @FXML
+    private Button emojiButton; // Кнопка эмодзи, теперь связывается через FXML
 
     private String chatName = null;
     private Client client = null;
@@ -197,6 +212,54 @@ public class ChatController implements Initializable {
                 event.consume();
             }
         });
+
+        if (emojiButton != null) {
+            emojiButton.setOnAction(e -> showEmojiPopup());
+        }
+    }
+
+    // --- Всплывающее окно с эмодзи ---
+    private void showEmojiPopup() {
+        Popup popup = new Popup();
+        FlowPane emojiPane = new FlowPane();
+        emojiPane.setHgap(6);
+        emojiPane.setVgap(6);
+        emojiPane.setPadding(new Insets(10));
+        emojiPane.setStyle("-fx-background-color: white; -fx-border-color: #ccc; -fx-border-radius: 8;");
+
+        // Пример набора эмодзи (можно расширить)
+        String[] emojis = {
+                "😀", "😁", "😂", "🤣", "😃", "😄", "😅", "😆", "😉", "😊",
+                "😍", "😘", "😗", "😙", "😚", "🙂", "🤗", "🤔", "😐",
+                "😑", "😶", "🙄", "😏", "😣", "😥", "😮", "🤐", "😯", "😪",
+                "😫", "😴", "😌", "😛", "😜", "😝", "🤤", "😒", "😓", "😔"
+        };
+
+        for (String emoji : emojis) {
+            Button btn = new Button(emoji);
+            btn.setStyle("-fx-font-size: 20; -fx-background-radius: 8;");
+            btn.setOnAction(e -> {
+                insertEmojiToTextField(emoji);
+                popup.hide();
+            });
+            emojiPane.getChildren().add(btn);
+        }
+
+        popup.getContent().add(emojiPane);
+        // Позиционируем popup под кнопкой
+        double x = emojiButton.localToScreen(0, 0).getX();
+        double y = emojiButton.localToScreen(0, emojiButton.getHeight()).getY();
+        popup.show(emojiButton, x, y);
+    }
+
+    private void insertEmojiToTextField(String emoji) {
+        int caret = messageTextField.getCaretPosition();
+        String text = messageTextField.getText();
+        StringBuilder sb = new StringBuilder(text);
+        sb.insert(caret, emoji);
+        messageTextField.setText(sb.toString());
+        messageTextField.positionCaret(caret + emoji.length());
+        messageTextField.requestFocus();
     }
 
     public void createChatButtonOnActivation(ActionEvent e) {
@@ -346,12 +409,10 @@ public class ChatController implements Initializable {
                                 messageVBox.getChildren().addAll(metaLabel, messageLabel);
                             }
                         } else {
-                            Label messageLabel = new Label(content);
-                            messageLabel.setWrapText(true);
-                            messageLabel
-                                    .setStyle(
-                                            "-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
-                            messageVBox.getChildren().addAll(metaLabel, messageLabel);
+                            // --- заменяем Label на TextFlow с markdown ---
+                            TextFlow messageFlow = parseMarkdownToTextFlow(content);
+                            messageFlow.setStyle("-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
+                            messageVBox.getChildren().addAll(metaLabel, messageFlow);
                         }
 
                         HBox messageBox = new HBox(messageVBox);
@@ -393,11 +454,10 @@ public class ChatController implements Initializable {
                             messageVBox.getChildren().addAll(metaLabel, messageLabel);
                         }
                     } else {
-                        Label messageLabel = new Label(content);
-                        messageLabel.setWrapText(true);
-                        messageLabel
-                                .setStyle("-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
-                        messageVBox.getChildren().addAll(metaLabel, messageLabel);
+                        // --- заменяем Label на TextFlow с markdown ---
+                        TextFlow messageFlow = parseMarkdownToTextFlow(content);
+                        messageFlow.setStyle("-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
+                        messageVBox.getChildren().addAll(metaLabel, messageFlow);
                     }
                     HBox messageBox = new HBox(messageVBox);
                     messageBox.maxWidthProperty().bind(messageContainer.widthProperty().subtract(20));
@@ -424,6 +484,56 @@ public class ChatController implements Initializable {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    // --- Markdown парсер для жирного, курсива и ссылок ---
+    private TextFlow parseMarkdownToTextFlow(String text) {
+        TextFlow flow = new TextFlow();
+        if (text == null) return flow;
+
+        // Паттерны: **bold**, *italic*, [text](url)
+        Pattern pattern = Pattern.compile(
+                "(\\*\\*([^*]+)\\*\\*)" + // bold
+                "|(\\*([^*]+)\\*)" +      // italic
+                "|(\\[([^\\]]+)\\]\\(([^)]+)\\))" // link
+        );
+        Matcher matcher = pattern.matcher(text);
+
+        int lastEnd = 0;
+        while (matcher.find()) {
+            // Обычный текст до совпадения
+            if (matcher.start() > lastEnd) {
+                flow.getChildren().add(new Text(text.substring(lastEnd, matcher.start())));
+            }
+            if (matcher.group(1) != null) { // bold
+                Text t = new Text(matcher.group(2));
+                t.setStyle("-fx-font-weight: bold;");
+                flow.getChildren().add(t);
+            } else if (matcher.group(3) != null) { // italic
+                Text t = new Text(matcher.group(4));
+                t.setStyle("-fx-font-style: italic;");
+                flow.getChildren().add(t);
+            } else if (matcher.group(5) != null) { // link
+                String label = matcher.group(6);
+                String url = matcher.group(7);
+                Hyperlink link = new Hyperlink(label);
+                link.setOnAction(e -> {
+                    try {
+                        java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
+                    } catch (Exception ex) {
+                        // ignore
+                    }
+                });
+                link.setStyle("-fx-text-fill: #1976D2;");
+                flow.getChildren().add(link);
+            }
+            lastEnd = matcher.end();
+        }
+        // Остаток текста
+        if (lastEnd < text.length()) {
+            flow.getChildren().add(new Text(text.substring(lastEnd)));
+        }
+        return flow;
     }
 
     public void setClientConnection(String userName) {
