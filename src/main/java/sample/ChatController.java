@@ -37,6 +37,8 @@ import java.io.FileInputStream;
 import java.util.Base64;
 import java.io.ByteArrayOutputStream;
 import javafx.scene.layout.StackPane;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 
 public class ChatController implements Initializable {
     @FXML
@@ -195,7 +197,6 @@ public class ChatController implements Initializable {
                 event.consume();
             }
         });
-        // ...existing code...
     }
 
     public void createChatButtonOnActivation(ActionEvent e) {
@@ -545,12 +546,21 @@ public class ChatController implements Initializable {
             stage.close();
         });
 
+        // Кнопка экспортировать чат
+        javafx.scene.control.Button exportBtn = new javafx.scene.control.Button("Сохранить чат");
+        exportBtn.setOnAction(this::exportChatToTxt);
+
+        // Кнопки управления участниками
+        HBox membersBtnBox = new HBox(5, removeBtn, addBtn);
+        // Кнопки сохранения
+        HBox saveBtnBox = new HBox(5, saveBtn, exportBtn);
+
         vbox.getChildren().addAll(
                 new Label("Название:"), nameField,
                 new Label("Описание:"), descField,
                 membersTitle, membersList,
-                new HBox(5, removeBtn, addBtn),
-                saveBtn);
+                membersBtnBox,
+                saveBtnBox);
 
         Scene scene = new Scene(vbox, 350, 400);
         stage.setScene(scene);
@@ -662,6 +672,47 @@ public class ChatController implements Initializable {
         });
         stage.show();
     }
+
+    // --- Экспорт чата в txt ---
+    @FXML
+    private void exportChatToTxt(ActionEvent e) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Сохранить чат как TXT");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Текстовый файл", "*.txt"));
+        File file = fileChooser.showSaveDialog(messageTextField.getScene().getWindow());
+        if (file != null) {
+            try (PrintWriter pw = new PrintWriter(new FileWriter(file, false))) {
+                for (HBox box : allMessageBoxes) {
+                    VBox vbox = (VBox) box.getChildren().get(0);
+                    String userAndTime = "";
+                    String text = "";
+                    for (Node node : vbox.getChildren()) {
+                        if (node instanceof Label label) {
+                            if (userAndTime.isEmpty()) {
+                                userAndTime = label.getText();
+                            } else {
+                                text = label.getText();
+                            }
+                        }
+                    }
+                    if (!userAndTime.isEmpty() && !text.isEmpty()) {
+                        pw.println(userAndTime + ": " + text);
+                    }
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    // Пример добавления кнопки (вы можете добавить в FXML и связать с
+    // exportChatToTxt)
+    // javafx.scene.control.Button exportBtn = new
+    // javafx.scene.control.Button("Сохранить чат");
+    // exportBtn.setOnAction(this::exportChatToTxt);
+    // mainAnchor.getChildren().add(exportBtn);
+    // AnchorPane.setTopAnchor(exportBtn, 10.0);
+    // AnchorPane.setRightAnchor(exportBtn, 120.0);
 
     private void filterMessages(String query) {
         if (query == null || query.isBlank()) {
