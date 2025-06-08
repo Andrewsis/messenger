@@ -266,6 +266,34 @@ public class ChatController implements Initializable {
                             imageView.setPreserveRatio(true);
                             imageView.setSmooth(true);
                             imageView.setCache(true);
+                            // Добавляем обработчик для открытия изображения во весь экран
+                            imageView.setOnMouseClicked(event -> {
+                                Stage stage = new Stage();
+                                stage.setTitle("Просмотр изображения");
+                                stage.initModality(Modality.APPLICATION_MODAL);
+                                stage.setFullScreenExitHint("");
+                                stage.setFullScreen(true);
+
+                                ImageView fullView = new ImageView(image);
+                                fullView.setPreserveRatio(true);
+                                fullView.setSmooth(true);
+                                fullView.setCache(true);
+                                fullView.fitWidthProperty().bind(stage.widthProperty().subtract(80));
+                                fullView.fitHeightProperty().bind(stage.heightProperty().subtract(80));
+
+                                VBox box = new VBox(fullView);
+                                box.setStyle(
+                                        "-fx-background-color: rgba(20,20,20,0.95); -fx-alignment: center; -fx-padding: 40;");
+                                Scene scene = new Scene(box);
+                                stage.setScene(scene);
+                                // Закрытие по клику или Esc
+                                fullView.setOnMouseClicked(e -> stage.close());
+                                scene.setOnKeyPressed(keyEvent -> {
+                                    if (keyEvent.getCode() == KeyCode.ESCAPE)
+                                        stage.close();
+                                });
+                                stage.show();
+                            });
                             messageVBox.getChildren().addAll(metaLabel, imageView);
                         } catch (Exception ex) {
                             // Если не удалось декодировать, показываем как текст
