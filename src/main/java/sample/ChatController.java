@@ -411,7 +411,8 @@ public class ChatController implements Initializable {
                         } else {
                             // --- заменяем Label на TextFlow с markdown ---
                             TextFlow messageFlow = parseMarkdownToTextFlow(content);
-                            messageFlow.setStyle("-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
+                            messageFlow.setStyle(
+                                    "-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
                             messageVBox.getChildren().addAll(metaLabel, messageFlow);
                         }
 
@@ -456,7 +457,8 @@ public class ChatController implements Initializable {
                     } else {
                         // --- заменяем Label на TextFlow с markdown ---
                         TextFlow messageFlow = parseMarkdownToTextFlow(content);
-                        messageFlow.setStyle("-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
+                        messageFlow
+                                .setStyle("-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
                         messageVBox.getChildren().addAll(metaLabel, messageFlow);
                     }
                     HBox messageBox = new HBox(messageVBox);
@@ -489,13 +491,14 @@ public class ChatController implements Initializable {
     // --- Markdown парсер для жирного, курсива и ссылок ---
     private TextFlow parseMarkdownToTextFlow(String text) {
         TextFlow flow = new TextFlow();
-        if (text == null) return flow;
+        if (text == null)
+            return flow;
 
         // Паттерны: **bold**, *italic*, [text](url)
         Pattern pattern = Pattern.compile(
                 "(\\*\\*([^*]+)\\*\\*)" + // bold
-                "|(\\*([^*]+)\\*)" +      // italic
-                "|(\\[([^\\]]+)\\]\\(([^)]+)\\))" // link
+                        "|(\\*([^*]+)\\*)" + // italic
+                        "|(\\[([^\\]]+)\\]\\(([^)]+)\\))" // link
         );
         Matcher matcher = pattern.matcher(text);
 
