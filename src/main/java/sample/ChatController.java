@@ -369,11 +369,11 @@ public class ChatController implements Initializable {
                 "-fx-background-color: #323232; -fx-text-fill: white; -fx-padding: 16; -fx-font-size: 14; -fx-background-radius: 8;");
         Scene scene = new Scene(new VBox(label));
         popup.setScene(scene);
-        // Позиционируем в правом нижнем угле
+        // Position in the bottom right corner
         popup.setX(mainStage.getX() + mainStage.getWidth() - 300);
         popup.setY(mainStage.getY() + mainStage.getHeight() - 100);
         popup.show();
-        // Автоматически закрыть через 3 секунды
+        // Auto close after 3 seconds
         new Thread(() -> {
             try {
                 Thread.sleep(3000);
@@ -390,17 +390,17 @@ public class ChatController implements Initializable {
             List<Message> messages = ClientRequest.parseChatMessages(responseXml);
             Platform.runLater(() -> {
                 boolean notify = false;
-                // Если пришло больше одного сообщения или контейнер пустой (первая загрузка) —
-                // очищаем и добавляем все
+                // If more than one message arrived or the container is empty (first load) —
+                // clear and add all
                 if (messages.size() > 1 || messageContainer.getChildren().isEmpty()) {
                     messageContainer.getChildren().clear();
                     allMessageBoxes.clear();
                     for (Message msg : messages) {
-                        // Форматируем время
+                        // Format time
                         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
                         String timeText = msg.getTimestamp().format(formatter);
 
-                        // Формируем подпись: имя пользователя и время
+                        // Compose signature: username and time
                         Label metaLabel = new Label(msg.getUsername() + " • " + timeText);
                         metaLabel.setStyle("-fx-font-size: 10; -fx-text-fill: gray;");
 
@@ -417,15 +417,15 @@ public class ChatController implements Initializable {
                                 Image image = new Image(new java.io.ByteArrayInputStream(imageBytes));
                                 messageVBox.getChildren().add(createImageMessageBox(image, metaLabel));
                             } catch (Exception ex) {
-                                // Если не удалось декодировать, показываем как текст
-                                Label messageLabel = new Label("[Ошибка изображения]");
+                                // If failed to decode, show as text
+                                Label messageLabel = new Label("[Image error]");
                                 messageLabel.setWrapText(true);
                                 messageVBox.getChildren().addAll(metaLabel, messageLabel);
                             }
                         } else {
-                            // --- заменяем Label на TextFlow с markdown ---
+                            // --- replace Label with TextFlow with markdown ---
                             TextFlow messageFlow = parseMarkdownToTextFlow(content);
-                            // --- Цвет сообщения зависит от пользователя ---
+                            // --- Message color depends on user ---
                             if (msg.getUsername().equals(userName)) {
                                 messageFlow.setStyle(
                                         "-fx-background-color: #B3E5FC; -fx-padding: 8; -fx-background-radius: 10;");
@@ -445,13 +445,13 @@ public class ChatController implements Initializable {
                         }
                         messageContainer.getChildren().add(messageBox);
                         allMessageBoxes.add(messageBox);
-                        // Если сообщение не от текущего пользователя, помечаем для уведомления
+                        // If the message is not from the current user, mark for notification
                         if (!msg.getUsername().equals(userName)) {
                             notify = true;
                         }
                     }
                 } else if (messages.size() == 1) {
-                    // Добавляем только новое сообщение
+                    // Add only the new message
                     Message msg = messages.get(0);
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
                     String timeText = msg.getTimestamp().format(formatter);
@@ -469,15 +469,15 @@ public class ChatController implements Initializable {
                             Image image = new Image(new java.io.ByteArrayInputStream(imageBytes));
                             messageVBox.getChildren().add(createImageMessageBox(image, metaLabel));
                         } catch (Exception ex) {
-                            // Если не удалось декодировать, показываем как текст
-                            Label messageLabel = new Label("[Ошибка изображения]");
+                            // If failed to decode, show as text
+                            Label messageLabel = new Label("[Image error]");
                             messageLabel.setWrapText(true);
                             messageVBox.getChildren().addAll(metaLabel, messageLabel);
                         }
                     } else {
-                        // --- заменяем Label на TextFlow с markdown ---
+                        // --- replace Label with TextFlow with markdown ---
                         TextFlow messageFlow = parseMarkdownToTextFlow(content);
-                        // --- Цвет сообщения зависит от пользователя ---
+                        // --- Message color depends on user ---
                         if (msg.getUsername().equals(userName)) {
                             messageFlow.setStyle(
                                     "-fx-background-color: #B3E5FC; -fx-padding: 8; -fx-background-radius: 10;");
@@ -496,7 +496,7 @@ public class ChatController implements Initializable {
                     }
                     messageContainer.getChildren().add(messageBox);
                     allMessageBoxes.add(messageBox);
-                    // Если сообщение не от текущего пользователя, помечаем для уведомления
+                    // If the message is not from the current user, mark for notification
                     if (!msg.getUsername().equals(userName)) {
                         notify = true;
                     }
@@ -505,7 +505,7 @@ public class ChatController implements Initializable {
                 scrollPane.setVvalue(1.0);
                 // Показываем уведомление, если окно неактивно и есть новое чужое сообщение
                 if (notify && mainStage != null && (!mainStage.isFocused() || mainStage.isIconified())) {
-                    showPopupNotification("Новое сообщение в чате!");
+                    showPopupNotification("New message in chat!");
                 }
             });
 
@@ -864,8 +864,8 @@ public class ChatController implements Initializable {
     @FXML
     private void exportChatToTxt(ActionEvent e) {
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Сохранить чат как TXT");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Текстовый файл", "*.txt"));
+        fileChooser.setTitle("Save chat as TXT");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Text file", "*.txt"));
         File file = fileChooser.showSaveDialog(messageTextField.getScene().getWindow());
         if (file != null) {
             try (PrintWriter pw = new PrintWriter(new FileWriter(file, false))) {
@@ -880,6 +880,18 @@ public class ChatController implements Initializable {
                             } else {
                                 text = label.getText();
                             }
+                        } else if (node instanceof TextFlow flow) {
+                            StringBuilder sb = new StringBuilder();
+                            for (Node t : flow.getChildren()) {
+                                if (t instanceof Text txt) {
+                                    sb.append(txt.getText());
+                                } else if (t instanceof Hyperlink link) {
+                                    sb.append(link.getText());
+                                }
+                            }
+                            text = sb.toString();
+                        } else if (node instanceof javafx.scene.control.TextArea area) {
+                            text = area.getText();
                         }
                     }
                     if (!userAndTime.isEmpty() && !text.isEmpty()) {
@@ -891,15 +903,6 @@ public class ChatController implements Initializable {
             }
         }
     }
-
-    // Пример добавления кнопки (вы можете добавить в FXML и связать с
-    // exportChatToTxt)
-    // javafx.scene.control.Button exportBtn = new
-    // javafx.scene.control.Button("Сохранить чат");
-    // exportBtn.setOnAction(this::exportChatToTxt);
-    // mainAnchor.getChildren().add(exportBtn);
-    // AnchorPane.setTopAnchor(exportBtn, 10.0);
-    // AnchorPane.setRightAnchor(exportBtn, 120.0);
 
     private void filterMessages(String query) {
         if (query == null || query.isBlank()) {
