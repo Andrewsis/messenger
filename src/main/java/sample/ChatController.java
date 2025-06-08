@@ -4,19 +4,19 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.scene.layout.HBox;
 import server.Client;
 import server.Constants;
-import server.DatabaseConnection;
-import java.sql.Connection;
 import java.time.format.DateTimeFormatter;
 import java.net.Socket;
 import java.net.URL;
@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.ResourceBundle;
 
 import common.ChatPreview;
+import common.GroupInfo;
 import common.Message;
 import javafx.application.Platform;
 import javafx.stage.Stage;
@@ -37,14 +38,106 @@ public class ChatController implements Initializable {
     private ScrollPane scrollPane;
     @FXML
     private VBox messageContainer;
+    @FXML
+    private Label membersLabel;
+    @FXML
+    private Label groupName;
+    @FXML
+    private VBox groupInfoVBox;
 
     private String chatName = null;
     private Client client = null;
     public String userName = null;
     public int chatId = -1;
+    private GroupInfo groupInfo;
 
-    public void addChatButtonOnActivation(ActionEvent e) {
+    private enum UsersDialogMode {
+        CREATE_CHAT, ADD_TO_GROUP
+    }
+
+    private UsersDialogMode usersDialogMode = UsersDialogMode.CREATE_CHAT;
+
+    public void initialize(URL location, ResourceBundle resources) {
+        groupInfoVBox.setCursor(Cursor.HAND);
+
+        // Изменяем фон при наведении мыши
+        groupInfoVBox.setOnMouseEntered(e -> groupInfoVBox.setStyle("-fx-background-color: #e0e0e0;"));
+        groupInfoVBox.setOnMouseExited(e -> groupInfoVBox.setStyle(""));
+
+        // Обработчик клика
+        groupInfoVBox.setOnMouseClicked(e -> {
+            try {
+                String requestMessagesXml = ClientRequest.getGroupInfoRequest(chatId);
+                client.sendSystemMessage(requestMessagesXml);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        accountListView.setCellFactory(param -> new ListCell<ChatPreview>() {
+            private final HBox content;
+            private final VBox textContainer;
+            private final Label chatName;
+            private final Label lastMessage;
+            // Конструктор для инициализации элементов интерфейса
+
+            {
+                chatName = new Label();
+                chatName.setStyle("-fx-font-weight: bold;");
+
+                lastMessage = new Label();
+                lastMessage.setStyle("-fx-text-fill: gray;");
+
+                textContainer = new VBox(chatName, lastMessage);
+                content = new HBox(textContainer);
+                content.setSpacing(10);
+            }
+
+            @Override
+            protected void updateItem(ChatPreview item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                } else {
+                    chatName.setText(item.getChatName());
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+                    String timeText = item.getTimestamp().format(formatter);
+                    lastMessage.setText(item.getLastMessage() + "  •  " + timeText);
+
+                    setGraphic(content);
+                }
+            }
+        });
+
+        messageTextField.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ENTER) {
+                sendButtonOnActivation(new ActionEvent()); // вызываем тот же метод
+            }
+        });
+
+        // download messages for selected chat
+        accountListView.setOnMouseClicked(event -> {
+            ChatPreview selectedItem = accountListView.getSelectionModel().getSelectedItem();
+            if (selectedItem != null) {
+                chatId = selectedItem.getChatId();
+                try {
+                    String requestMessagesXml = ClientRequest.getMessagesRequest(chatId);
+                    messageContainer.getChildren().clear();
+
+                    client.sendSystemMessage(requestMessagesXml);
+
+                    groupName.setText(selectedItem.getChatName());
+                    membersLabel.setText("Members: " + selectedItem.getMembersQuantity());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    public void createChatButtonOnActivation(ActionEvent e) {
         try {
+            usersDialogMode = UsersDialogMode.CREATE_CHAT;
             String requestAllUsersFromDB = ClientRequest.getAllUsersRequest();
             client.sendSystemMessage(requestAllUsersFromDB);
         } catch (Exception ex) {
@@ -147,7 +240,7 @@ public class ChatController implements Initializable {
                     messageVBox.setSpacing(2);
 
                     HBox messageBox = new HBox(messageVBox);
-                    messageBox.setMaxWidth(messageContainer.getWidth());
+                    messageBox.maxWidthProperty().bind(messageContainer.widthProperty().subtract(20));
 
                     // Выравнивание по отправителю
                     if (msg.getUsername().equals(userName)) {
@@ -186,7 +279,13 @@ public class ChatController implements Initializable {
                     else if (message.contains("<messages>")) {
                         addMessageToChat(message); // обычное сообщение
                     } else if (message.contains("<users>")) {
-                        showUsersForNewChat(message); // обычное сообщение
+                        if (usersDialogMode == UsersDialogMode.CREATE_CHAT) {
+                            showUsersForNewChat(message);
+                        } else if (usersDialogMode == UsersDialogMode.ADD_TO_GROUP) {
+                            showUsersForAddToGroup(message);
+                        }
+                    } else if (message.contains("<groupInfo>")) {
+                        handleGroupInfo(message); // обычное сообщение
                     }
                 });
             });
@@ -198,57 +297,6 @@ public class ChatController implements Initializable {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public void initialize(URL location, ResourceBundle resources) {
-        accountListView.setCellFactory(param -> new ListCell<ChatPreview>() {
-            private final HBox content;
-            private final VBox textContainer;
-            private final Label chatName;
-            private final Label lastMessage;
-
-            {
-                chatName = new Label();
-                chatName.setStyle("-fx-font-weight: bold;");
-
-                lastMessage = new Label();
-                lastMessage.setStyle("-fx-text-fill: gray;");
-
-                textContainer = new VBox(chatName, lastMessage);
-                content = new HBox(textContainer);
-                content.setSpacing(10);
-            }
-
-            @Override
-            protected void updateItem(ChatPreview item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setGraphic(null);
-                } else {
-                    chatName.setText(item.getChatName());
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-                    String timeText = item.getTimestamp().format(formatter);
-                    lastMessage.setText(item.getLastMessage() + "  •  " + timeText);
-                    setGraphic(content);
-                }
-            }
-        });
-
-        // download messages for selected chat
-        accountListView.setOnMouseClicked(event -> {
-            ChatPreview selectedItem = accountListView.getSelectionModel().getSelectedItem();
-            if (selectedItem != null) {
-                chatId = selectedItem.getChatId();
-                try {
-                    String requestMessagesXml = ClientRequest.getMessagesRequest(chatId);
-                    messageContainer.getChildren().clear();
-
-                    client.sendSystemMessage(requestMessagesXml);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
     }
 
     private void handleChatPreview(String responseXml) {
@@ -265,5 +313,126 @@ public class ChatController implements Initializable {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void showUsersForAddToGroup(String usersXml) {
+        try {
+            List<String> users = ClientRequest.parseAllUsers(usersXml);
+            // Убираем уже существующих участников группы
+            users.removeAll(groupInfo.getMembers());
+
+            Stage stage = new Stage();
+            stage.setTitle("Добавить участника в группу");
+
+            VBox vbox = new VBox();
+            vbox.setPadding(new Insets(10));
+            vbox.setSpacing(10);
+
+            for (String user : users) {
+                Label userLabel = new Label(user);
+                userLabel.setStyle("-fx-background-color: #f0f0f0; -fx-padding: 8; -fx-background-radius: 8;");
+                userLabel.setMaxWidth(Double.MAX_VALUE);
+
+                userLabel.setOnMouseClicked(event -> {
+                    try {
+                        String req = ClientRequest.addUserToChatRequest(user, chatId);
+                        client.sendSystemMessage(req);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                    stage.close();
+                });
+
+                vbox.getChildren().add(userLabel);
+            }
+
+            Scene scene = new Scene(vbox, 300, 400);
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.showAndWait();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void handleGroupInfo(String responseXml) {
+        groupInfo = ClientRequest.parseGroupInfo(responseXml);
+
+        Stage stage = new Stage();
+        stage.setTitle("Редактировать группу");
+
+        VBox vbox = new VBox();
+        vbox.setPadding(new Insets(15));
+        vbox.setSpacing(10);
+
+        // Название группы
+        TextField nameField = new TextField(groupName.getText());
+        nameField.setPromptText("Название группы");
+
+        // Описание группы
+        TextField descField = new TextField(groupInfo.getGroupBio());
+        descField.setPromptText("Описание группы");
+
+        // Список участников
+        Label membersTitle = new Label("Участники:");
+        ListView<String> membersList = new ListView<>();
+
+        membersList.getItems().addAll(groupInfo.getMembers());
+
+        // Кнопка удалить участника
+        javafx.scene.control.Button removeBtn = new javafx.scene.control.Button("Удалить выбранного");
+        removeBtn.setOnAction(ev -> {
+            String selectedUser = membersList.getSelectionModel().getSelectedItem();
+            if (selectedUser != null && !selectedUser.equals(userName)) {
+                // Отправить запрос на удаление участника
+                try {
+                    String req = ClientRequest.removeUserFromChatRequest(selectedUser, chatId);
+                    client.sendSystemMessage(req);
+                    membersList.getItems().remove(selectedUser);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+
+        // Кнопка добавить участника
+        javafx.scene.control.Button addBtn = new javafx.scene.control.Button("Добавить участника");
+        addBtn.setOnAction(ev -> {
+            // Получить всех пользователей, кроме уже в чате
+            try {
+                usersDialogMode = UsersDialogMode.ADD_TO_GROUP;
+                String req = ClientRequest.getAllUsersRequest();
+                client.sendSystemMessage(req);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            // После получения <users> сервером, showUsersForNewChat будет вызван
+            // Можно реализовать отдельное окно выбора пользователя для добавления
+        });
+
+        // Кнопка сохранить изменения
+        javafx.scene.control.Button saveBtn = new javafx.scene.control.Button("Сохранить");
+        saveBtn.setOnAction(ev -> {
+            String newName = nameField.getText().trim();
+            String newDesc = descField.getText().trim();
+            // if (!newName.isEmpty()) {
+            // String req = ClientRequest.updateChatInfoRequest(chatId, newName, newDesc);
+            // client.sendSystemMessage(req);
+            // groupName.setText(newName);
+            // }
+            stage.close();
+        });
+
+        vbox.getChildren().addAll(
+                new Label("Название:"), nameField,
+                new Label("Описание:"), descField,
+                membersTitle, membersList,
+                new HBox(5, removeBtn, addBtn),
+                saveBtn);
+
+        Scene scene = new Scene(vbox, 350, 400);
+        stage.setScene(scene);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.showAndWait();
     }
 }

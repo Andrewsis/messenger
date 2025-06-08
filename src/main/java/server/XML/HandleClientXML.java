@@ -11,8 +11,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import common.ChatPreviewServ;
+import common.GroupInfoServ;
 import common.MessageServ;
-import sample.ClientRequest;
 
 public class HandleClientXML {
     public static String processXml(String xmlString) throws Exception {
@@ -57,6 +57,23 @@ public class HandleClientXML {
                 List<MessageServ> messages = MessageServ.sendMessage(chatId, content, sender);
 
                 responseXml = ServerResponse.getMessagesResponse(messages);
+            }
+            case "getGroupInfo" -> {
+                int chatId = Integer.parseInt(root.getAttribute("chatId"));
+                GroupInfoServ groupInfo = GroupInfoServ.getGroupInfo(chatId);
+                responseXml = ServerResponse.getGroupInfoResponse(groupInfo);
+            }
+            case "removeUser" -> {
+                String username = root.getAttribute("username");
+                int chatId = Integer.parseInt(root.getAttribute("chatId"));
+
+                responseXml = ServerResponse.removeUserFromChatResponse(username, chatId);
+            }
+            case "addUser" -> {
+                String username = root.getAttribute("username");
+                int chatId = Integer.parseInt(root.getAttribute("chatId"));
+
+                responseXml = ServerResponse.addUserToChatResponse(username, chatId);
             }
             default -> {
                 responseXml = ServerResponse.statusResponse(400, "Unknown request type");

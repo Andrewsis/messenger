@@ -68,6 +68,11 @@ public class SampleController {
 
                         Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
                         stage.setScene(new Scene(root));
+
+                        stage.setMinWidth(600);
+                        stage.setMinHeight(300);
+                        stage.setTitle("Chat Application - " + username);
+
                         stage.show();
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -92,6 +97,11 @@ public class SampleController {
 
                     Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
                     stage.setScene(new Scene(root));
+
+                    stage.setMinWidth(600);
+                    stage.setMinHeight(300);
+                    stage.setTitle("Chat Application - " + username);
+
                     stage.show();
                 } catch (Exception e) {
                     e.printStackTrace();

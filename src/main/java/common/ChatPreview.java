@@ -7,12 +7,14 @@ public class ChatPreview {
     public String chatName;
     public LocalDateTime timestamp;
     public String lastMessage;
+    public int membersQuantity;
 
-    public ChatPreview(int chatId, String chatName, String lastMessage, LocalDateTime timestamp) {
+    public ChatPreview(int chatId, String chatName, String lastMessage, LocalDateTime timestamp, int membersQuantity) {
         this.chatId = chatId;
         this.chatName = chatName;
         this.timestamp = timestamp;
         this.lastMessage = lastMessage;
+        this.membersQuantity = membersQuantity;
     }
 
     public String getChatName() {
@@ -29,6 +31,10 @@ public class ChatPreview {
 
     public LocalDateTime getTimestamp() {
         return timestamp;
+    }
+
+    public int getMembersQuantity() {
+        return membersQuantity;
     }
 
     @Override

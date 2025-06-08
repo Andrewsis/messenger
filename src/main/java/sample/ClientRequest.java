@@ -9,6 +9,7 @@ import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
 import common.ChatPreview;
+import common.GroupInfo;
 import common.Message;
 
 import javax.xml.transform.Transformer;
@@ -112,6 +113,60 @@ public class ClientRequest {
         return writer.toString() + "<END_OF_MESSAGE>";
     }
 
+    // Members in group and group bio
+    public static String getGroupInfoRequest(int chatId) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+
+        Document doc = builder.newDocument();
+
+        Element getGroupInfo = doc.createElement("getGroupInfo");
+        getGroupInfo.setAttribute("chatId", String.valueOf(chatId));
+
+        doc.appendChild(getGroupInfo);
+
+        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(writer));
+        return writer.toString() + "<END_OF_MESSAGE>";
+    }
+
+    public static String removeUserFromChatRequest(String username, int chatId) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+
+        Document doc = builder.newDocument();
+
+        Element removeUser = doc.createElement("removeUser");
+        removeUser.setAttribute("username", username);
+        removeUser.setAttribute("chatId", String.valueOf(chatId));
+
+        doc.appendChild(removeUser);
+
+        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(writer));
+        return writer.toString() + "<END_OF_MESSAGE>";
+    }
+
+    public static String addUserToChatRequest(String user, int chatId) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+
+        Document doc = builder.newDocument();
+
+        Element addUser = doc.createElement("addUser");
+        addUser.setAttribute("username", user);
+        addUser.setAttribute("chatId", String.valueOf(chatId));
+
+        doc.appendChild(addUser);
+
+        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(writer));
+        return writer.toString() + "<END_OF_MESSAGE>";
+    }
+
     public static String sendLoginRequest(String userName) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
@@ -201,7 +256,16 @@ public class ClientRequest {
                         System.err.println("Invalid timestamp format: " + e.getMessage());
                     }
 
-                    ChatPreview preview = new ChatPreview(chatId, chatName, lastMessage, lastTimestamp);
+                    int membersQuantity = 0;
+                    try {
+                        membersQuantity = Integer.parseInt(getTagContent(chatElement, "membersQuantity"));
+                    } catch (NumberFormatException e) {
+                        System.err.println("Invalid membersQuantity format: " + e.getMessage());
+                    }
+
+                    ChatPreview preview = new ChatPreview(chatId, chatName, lastMessage, lastTimestamp,
+                            membersQuantity);
+
                     chatPreviews.add(preview);
                 }
             }
@@ -296,6 +360,49 @@ public class ClientRequest {
             e.printStackTrace();
         }
         return users;
+    }
+
+    public static GroupInfo parseGroupInfo(String responseXml) {
+        if (responseXml == null || responseXml.trim().isEmpty()) {
+            System.err.println("responseXml is empty or null. Cannot parse.");
+            return null;
+        }
+
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+
+            // Удаляем возможный маркер <END_OF_MESSAGE>
+            responseXml = responseXml.replace("<END_OF_MESSAGE>", "").trim();
+
+            Document doc = builder.parse(new InputSource(new StringReader(responseXml)));
+            doc.getDocumentElement().normalize();
+
+            NodeList groupList = doc.getElementsByTagName("groupInfo");
+
+            if (groupList.getLength() > 0) {
+                Node groupNode = groupList.item(0);
+
+                if (groupNode.getNodeType() == Node.ELEMENT_NODE) {
+                    Element groupElement = (Element) groupNode;
+
+                    NodeList membersNodes = groupElement.getElementsByTagName("member");
+                    List<String> members = new ArrayList<>();
+                    for (int j = 0; j < membersNodes.getLength(); j++) {
+                        members.add(membersNodes.item(j).getTextContent());
+                    }
+
+                    String groupBio = getTagContent(groupElement, "groupBio");
+
+                    return new GroupInfo(members, groupBio);
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error parsing group info: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
     }
 
     // Вспомогательный метод для безопасного получения значения тега

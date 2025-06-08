@@ -6,6 +6,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.*;
 
 import common.ChatPreviewServ;
+import common.GroupInfoServ;
 import common.MessageServ;
 import server.DatabaseConnection;
 
@@ -149,10 +150,46 @@ public class ServerResponse {
             message.appendChild(doc.createTextNode(chat.lastMessage));
             chatElem.appendChild(message);
 
+            Element membersQuantity = doc.createElement("membersQuantity");
+            membersQuantity.appendChild(doc.createTextNode(String.valueOf(chat.membersQuantity)));
+            chatElem.appendChild(membersQuantity);
+
             chatsElem.appendChild(chatElem);
         }
 
         doc.appendChild(chatsElem);
+
+        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(writer));
+        return writer.toString();
+    }
+
+    public static String getGroupInfoResponse(GroupInfoServ groupInfo) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document doc = builder.newDocument();
+
+        Element groupInfoElem = doc.createElement("groupInfo");
+
+        // Добавляем участников группы
+        Element membersElem = doc.createElement("members");
+        for (String member : groupInfo.members) {
+            Element memberElem = doc.createElement("member");
+            memberElem.appendChild(doc.createTextNode(member));
+            membersElem.appendChild(memberElem);
+        }
+        groupInfoElem.appendChild(membersElem);
+
+        // Добавляем описание группы
+        Element bioElem = doc.createElement("groupBio");
+        bioElem.appendChild(doc.createTextNode(groupInfo.groupBio));
+        groupInfoElem.appendChild(bioElem);
+
+        doc.appendChild(groupInfoElem);
 
         Transformer transformer = TransformerFactory.newInstance().newTransformer();
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
@@ -236,6 +273,94 @@ public class ServerResponse {
         connectDB.close();
 
         return statusResponse(200, "Chat created successfully: " + chatName + " with " + otherUsername);
+    }
+
+    public static String removeUserFromChatResponse(String username, int chatId) throws Exception {
+        DatabaseConnection connectNow = new DatabaseConnection();
+        Connection connectDB = connectNow.getConnection();
+
+        // Получаем id пользователя по username
+        int userId = -1;
+        PreparedStatement userStmt = connectDB.prepareStatement(
+                "SELECT id FROM user_accounts WHERE username = ?");
+        userStmt.setString(1, username);
+        ResultSet userRs = userStmt.executeQuery();
+        if (userRs.next()) {
+            userId = userRs.getInt("id");
+        }
+        userRs.close();
+        userStmt.close();
+
+        if (userId == -1) {
+            connectDB.close();
+            return statusResponse(400, "User not found");
+        }
+
+        // Удаляем участника из чата
+        PreparedStatement partStmt = connectDB.prepareStatement(
+                "DELETE FROM chat_participants WHERE chat_id = ? AND user_id = ?");
+        partStmt.setInt(1, chatId);
+        partStmt.setInt(2, userId);
+        int rowsAffected = partStmt.executeUpdate();
+        partStmt.close();
+
+        connectDB.close();
+
+        if (rowsAffected > 0) {
+            return statusResponse(200, "User removed from chat successfully");
+        } else {
+            return statusResponse(400, "User not found in chat");
+        }
+    }
+
+    public static String addUserToChatResponse(String username, int chatId) throws Exception {
+        DatabaseConnection connectNow = new DatabaseConnection();
+        Connection connectDB = connectNow.getConnection();
+
+        // Получаем id пользователя по username
+        int userId = -1;
+        PreparedStatement userStmt = connectDB.prepareStatement(
+                "SELECT id FROM user_accounts WHERE username = ?");
+        userStmt.setString(1, username);
+        ResultSet userRs = userStmt.executeQuery();
+        if (userRs.next()) {
+            userId = userRs.getInt("id");
+        }
+        userRs.close();
+        userStmt.close();
+
+        if (userId == -1) {
+            connectDB.close();
+            return statusResponse(400, "User not found");
+        }
+
+        // Проверяем, не является ли пользователь уже участником чата
+        PreparedStatement checkStmt = connectDB.prepareStatement(
+                "SELECT COUNT(*) FROM chat_participants WHERE chat_id = ? AND user_id = ?");
+        checkStmt.setInt(1, chatId);
+        checkStmt.setInt(2, userId);
+        ResultSet checkRs = checkStmt.executeQuery();
+        checkRs.next();
+        int count = checkRs.getInt(1);
+        checkRs.close();
+        checkStmt.close();
+
+        if (count > 0) {
+            connectDB.close();
+            return statusResponse(400, "User already in chat");
+        }
+
+        // Вставляем участника в чат
+        PreparedStatement partStmt = connectDB.prepareStatement(
+                "INSERT INTO chat_participants (chat_id, user_id) VALUES (?, ?)");
+        partStmt.setInt(1, chatId);
+        partStmt.setInt(2, userId);
+        partStmt.executeUpdate();
+        partStmt.close();
+
+        connectDB.close();
+
+        return statusResponse(200, "User added to chat successfully");
     }
 
     public static void main(String[] args) throws Exception {
