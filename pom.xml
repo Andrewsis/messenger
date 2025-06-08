@@ -67,6 +67,11 @@
       <artifactId>postgresql</artifactId>
       <version>42.7.5</version>
     </dependency>
+    <dependency>
+    <groupId>org.openjfx</groupId>
+    <artifactId>javafx-swing</artifactId>
+    <version>24.0.1</version>
+</dependency>
   </dependencies>
 
   <build>
@@ -84,6 +89,12 @@
               <version>0.0.8</version>
               <configuration>
                   <mainClass>sample.Main</mainClass>
+                  <modules>
+                    <module>javafx.controls</module>
+                    <module>javafx.fxml</module>
+                    <module>javafx.swing</module>
+                    <module>java.desktop</module>
+                  </modules>
               </configuration>
           </plugin>
         <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->

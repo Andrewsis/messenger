@@ -36,6 +36,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.Base64;
 import java.io.ByteArrayOutputStream;
+import javafx.scene.layout.StackPane;
 
 public class ChatController implements Initializable {
     @FXML
@@ -261,40 +262,7 @@ public class ChatController implements Initializable {
                             String base64 = content.substring(start, end);
                             byte[] imageBytes = Base64.getDecoder().decode(base64);
                             Image image = new Image(new java.io.ByteArrayInputStream(imageBytes));
-                            ImageView imageView = new ImageView(image);
-                            imageView.setFitWidth(220);
-                            imageView.setPreserveRatio(true);
-                            imageView.setSmooth(true);
-                            imageView.setCache(true);
-                            // Добавляем обработчик для открытия изображения во весь экран
-                            imageView.setOnMouseClicked(event -> {
-                                Stage stage = new Stage();
-                                stage.setTitle("Просмотр изображения");
-                                stage.initModality(Modality.APPLICATION_MODAL);
-                                stage.setFullScreenExitHint("");
-                                stage.setFullScreen(true);
-
-                                ImageView fullView = new ImageView(image);
-                                fullView.setPreserveRatio(true);
-                                fullView.setSmooth(true);
-                                fullView.setCache(true);
-                                fullView.fitWidthProperty().bind(stage.widthProperty().subtract(80));
-                                fullView.fitHeightProperty().bind(stage.heightProperty().subtract(80));
-
-                                VBox box = new VBox(fullView);
-                                box.setStyle(
-                                        "-fx-background-color: rgba(20,20,20,0.95); -fx-alignment: center; -fx-padding: 40;");
-                                Scene scene = new Scene(box);
-                                stage.setScene(scene);
-                                // Закрытие по клику или Esc
-                                fullView.setOnMouseClicked(e -> stage.close());
-                                scene.setOnKeyPressed(keyEvent -> {
-                                    if (keyEvent.getCode() == KeyCode.ESCAPE)
-                                        stage.close();
-                                });
-                                stage.show();
-                            });
-                            messageVBox.getChildren().addAll(metaLabel, imageView);
+                            messageVBox.getChildren().add(createImageMessageBox(image, metaLabel));
                         } catch (Exception ex) {
                             // Если не удалось декодировать, показываем как текст
                             Label messageLabel = new Label("[Ошибка изображения]");
@@ -536,5 +504,82 @@ public class ChatController implements Initializable {
                 ex.printStackTrace();
             }
         }
+    }
+
+    private VBox createImageMessageBox(Image image, Label metaLabel) {
+        ImageView imageView = createChatImageView(image);
+        VBox messageVBox = new VBox();
+        messageVBox.setSpacing(2);
+        messageVBox.getChildren().addAll(metaLabel, imageView);
+        return messageVBox;
+    }
+
+    private ImageView createChatImageView(Image image) {
+        ImageView imageView = new ImageView(image);
+        imageView.setFitWidth(220);
+        imageView.setPreserveRatio(true);
+        imageView.setSmooth(true);
+        imageView.setCache(true);
+        imageView.setOnMouseClicked(_ -> showImageFullscreen(image));
+        return imageView;
+    }
+
+    private void showImageFullscreen(Image image) {
+        Stage stage = new Stage();
+        stage.setTitle("Просмотр изображения");
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setFullScreenExitHint("");
+        stage.setFullScreen(true);
+
+        ImageView fullView = new ImageView(image);
+        fullView.setPreserveRatio(true);
+        fullView.setSmooth(true);
+        fullView.setCache(true);
+        fullView.fitWidthProperty().bind(stage.widthProperty().subtract(80));
+        fullView.fitHeightProperty().bind(stage.heightProperty().subtract(80));
+
+        javafx.scene.control.Button saveBtn = new javafx.scene.control.Button("Скачать");
+        saveBtn.setStyle(
+                "-fx-background-color: #2196F3; -fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 8 16; -fx-font-size: 14;");
+        saveBtn.setOnAction(ev -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Сохранить изображение");
+            fileChooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("PNG", "*.png"),
+                    new FileChooser.ExtensionFilter("JPEG", "*.jpg", "*.jpeg"),
+                    new FileChooser.ExtensionFilter("Все файлы", "*.*"));
+            File file = fileChooser.showSaveDialog(stage);
+            if (file != null) {
+                try {
+                    String ext = "png";
+                    String fileName = file.getName().toLowerCase();
+                    if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg"))
+                        ext = "jpg";
+                    javax.imageio.ImageIO.write(
+                            javafx.embed.swing.SwingFXUtils.fromFXImage(image, null),
+                            ext,
+                            file);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+        // Кнопка в правом верхнем углу
+        VBox box = new VBox();
+        box.setStyle("-fx-background-color: rgba(20,20,20,0.95); -fx-alignment: center; -fx-padding: 40;");
+        javafx.scene.layout.StackPane stack = new javafx.scene.layout.StackPane(fullView);
+        StackPane.setAlignment(saveBtn, javafx.geometry.Pos.TOP_RIGHT);
+        StackPane.setMargin(saveBtn, new Insets(20, 20, 0, 0));
+        stack.getChildren().add(saveBtn);
+        box.getChildren().add(stack);
+        Scene scene = new Scene(box);
+        stage.setScene(scene);
+        // Закрытие по клику или Esc
+        fullView.setOnMouseClicked(_ -> stage.close());
+        scene.setOnKeyPressed(keyEvent -> {
+            if (keyEvent.getCode() == KeyCode.ESCAPE)
+                stage.close();
+        });
+        stage.show();
     }
 }
