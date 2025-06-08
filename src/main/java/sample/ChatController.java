@@ -66,9 +66,12 @@ public class ChatController implements Initializable {
         CREATE_CHAT, ADD_TO_GROUP
     }
 
+    private Stage mainStage;
     private UsersDialogMode usersDialogMode = UsersDialogMode.CREATE_CHAT;
 
-    private Stage mainStage;
+    private TextField searchTextField; // поле поиска
+    private javafx.scene.layout.AnchorPane mainAnchor; // родительский AnchorPane для динамического добавления поля
+                                                       // поиска
 
     public void initialize(URL location, ResourceBundle resources) {
         groupInfoVBox.setCursor(Cursor.HAND);
@@ -161,6 +164,38 @@ public class ChatController implements Initializable {
         Platform.runLater(() -> {
             mainStage = (Stage) messageTextField.getScene().getWindow();
         });
+
+        // --- Поиск: строка поиска ---
+        searchTextField = new TextField();
+        searchTextField.setPromptText("Поиск по сообщениям...");
+        searchTextField.setMinWidth(200);
+        searchTextField.setStyle(
+                "-fx-background-radius: 8; -fx-padding: 6 10; -fx-font-size: 13; -fx-background-color: white; -fx-effect: dropshadow(gaussian, #888, 8, 0.2, 0, 2);");
+        searchTextField.textProperty().addListener((_, __, newVal) -> filterMessages(newVal));
+        searchTextField.setOnKeyPressed(ev -> {
+            if (ev.getCode() == KeyCode.ESCAPE) {
+                hideSearchField();
+            }
+        });
+        searchTextField.focusedProperty().addListener((_, __, newVal) -> {
+            if (!newVal)
+                hideSearchField();
+        });
+
+        // Найдём AnchorPane-родитель scrollPane (mainAnchor)
+        Node parent = scrollPane.getParent();
+        if (parent instanceof javafx.scene.layout.AnchorPane anchor) {
+            mainAnchor = anchor;
+        }
+
+        // Глобальный хоткей Ctrl+F
+        scrollPane.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.F && event.isControlDown()) {
+                showSearchField();
+                event.consume();
+            }
+        });
+        // ...existing code...
     }
 
     public void createChatButtonOnActivation(ActionEvent e) {
@@ -256,7 +291,7 @@ public class ChatController implements Initializable {
                 "-fx-background-color: #323232; -fx-text-fill: white; -fx-padding: 16; -fx-font-size: 14; -fx-background-radius: 8;");
         Scene scene = new Scene(new VBox(label));
         popup.setScene(scene);
-        // Позиционируем в правом нижнем углу
+        // Позиционируем в правом нижнем угле
         popup.setX(mainStage.getX() + mainStage.getWidth() - 300);
         popup.setY(mainStage.getY() + mainStage.getHeight() - 100);
         popup.show();
@@ -270,12 +305,16 @@ public class ChatController implements Initializable {
         }).start();
     }
 
+    private List<HBox> allMessageBoxes = new java.util.ArrayList<>();
+
     private void addMessageToChat(String responseXml) {
         try {
             // System.out.println("Received on ChatController XML:\n" + responseXml);
             List<Message> messages = ClientRequest.parseChatMessages(responseXml);
             Platform.runLater(() -> {
                 boolean notify = false;
+                messageContainer.getChildren().clear();
+                allMessageBoxes.clear();
                 for (Message msg : messages) {
                     // Форматируем время
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
@@ -319,6 +358,7 @@ public class ChatController implements Initializable {
                         messageBox.setStyle("-fx-alignment: top-left;");
                     }
                     messageContainer.getChildren().add(messageBox);
+                    allMessageBoxes.add(messageBox);
                     // Если сообщение не от текущего пользователя, помечаем для уведомления
                     if (!msg.getUsername().equals(userName)) {
                         notify = true;
@@ -604,7 +644,7 @@ public class ChatController implements Initializable {
                 }
             }
         });
-        // Кнопка в правом верхнем углу
+        // Кнопка в правом верхнем угле
         VBox box = new VBox();
         box.setStyle("-fx-background-color: rgba(20,20,20,0.95); -fx-alignment: center; -fx-padding: 40;");
         javafx.scene.layout.StackPane stack = new javafx.scene.layout.StackPane(fullView);
@@ -621,5 +661,44 @@ public class ChatController implements Initializable {
                 stage.close();
         });
         stage.show();
+    }
+
+    private void filterMessages(String query) {
+        if (query == null || query.isBlank()) {
+            messageContainer.getChildren().setAll(allMessageBoxes);
+            return;
+        }
+        String lower = query.toLowerCase();
+        List<HBox> filtered = new java.util.ArrayList<>();
+        for (HBox box : allMessageBoxes) {
+            VBox vbox = (VBox) box.getChildren().get(0);
+            for (javafx.scene.Node node : vbox.getChildren()) {
+                if (node instanceof Label label && label.getText().toLowerCase().contains(lower)) {
+                    filtered.add(box);
+                    break;
+                }
+            }
+        }
+        messageContainer.getChildren().setAll(filtered);
+    }
+
+    private void showSearchField() {
+        if (mainAnchor != null && !mainAnchor.getChildren().contains(searchTextField)) {
+            mainAnchor.getChildren().add(searchTextField);
+            javafx.scene.layout.AnchorPane.setTopAnchor(searchTextField, 10.0);
+            javafx.scene.layout.AnchorPane.setLeftAnchor(searchTextField, 10.0);
+            javafx.scene.layout.AnchorPane.setRightAnchor(searchTextField, 10.0);
+        }
+        searchTextField.setVisible(true);
+        searchTextField.setManaged(true);
+        searchTextField.requestFocus();
+    }
+
+    private void hideSearchField() {
+        if (mainAnchor != null) {
+            mainAnchor.getChildren().remove(searchTextField);
+        }
+        searchTextField.clear();
+        filterMessages("");
     }
 }
