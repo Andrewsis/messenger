@@ -205,13 +205,27 @@ public class ChatController implements Initializable {
             mainAnchor = anchor;
         }
 
-        // Глобальный хоткей Ctrl+F
+        // Глобальный хоткей Ctrl+F (оставьте этот блок для scrollPane, если хотите)
         scrollPane.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.F && event.isControlDown()) {
                 showSearchField();
                 event.consume();
             }
         });
+
+        // --- Добавьте этот блок для всей сцены ---
+        Platform.runLater(() -> {
+            mainStage = (Stage) messageTextField.getScene().getWindow();
+            if (mainStage != null && mainStage.getScene() != null) {
+                mainStage.getScene().addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
+                    if (event.getCode() == KeyCode.F && event.isControlDown()) {
+                        showSearchField();
+                        event.consume();
+                    }
+                });
+            }
+        });
+        // --- конец нового блока ---
 
         if (emojiButton != null) {
             emojiButton.setOnAction(e -> showEmojiPopup());
@@ -411,8 +425,14 @@ public class ChatController implements Initializable {
                         } else {
                             // --- заменяем Label на TextFlow с markdown ---
                             TextFlow messageFlow = parseMarkdownToTextFlow(content);
-                            messageFlow.setStyle(
-                                    "-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
+                            // --- Цвет сообщения зависит от пользователя ---
+                            if (msg.getUsername().equals(userName)) {
+                                messageFlow.setStyle(
+                                        "-fx-background-color: #B3E5FC; -fx-padding: 8; -fx-background-radius: 10;");
+                            } else {
+                                messageFlow.setStyle(
+                                        "-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
+                            }
                             messageVBox.getChildren().addAll(metaLabel, messageFlow);
                         }
 
@@ -457,8 +477,14 @@ public class ChatController implements Initializable {
                     } else {
                         // --- заменяем Label на TextFlow с markdown ---
                         TextFlow messageFlow = parseMarkdownToTextFlow(content);
-                        messageFlow
-                                .setStyle("-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
+                        // --- Цвет сообщения зависит от пользователя ---
+                        if (msg.getUsername().equals(userName)) {
+                            messageFlow.setStyle(
+                                    "-fx-background-color: #B3E5FC; -fx-padding: 8; -fx-background-radius: 10;");
+                        } else {
+                            messageFlow.setStyle(
+                                    "-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
+                        }
                         messageVBox.getChildren().addAll(metaLabel, messageFlow);
                     }
                     HBox messageBox = new HBox(messageVBox);
@@ -884,11 +910,30 @@ public class ChatController implements Initializable {
         List<HBox> filtered = new java.util.ArrayList<>();
         for (HBox box : allMessageBoxes) {
             VBox vbox = (VBox) box.getChildren().get(0);
+            boolean found = false;
             for (javafx.scene.Node node : vbox.getChildren()) {
                 if (node instanceof Label label && label.getText().toLowerCase().contains(lower)) {
-                    filtered.add(box);
+                    found = true;
                     break;
                 }
+                // --- ищем по содержимому TextFlow ---
+                if (node instanceof TextFlow flow) {
+                    StringBuilder sb = new StringBuilder();
+                    for (javafx.scene.Node t : flow.getChildren()) {
+                        if (t instanceof Text txt) {
+                            sb.append(txt.getText());
+                        } else if (t instanceof Hyperlink link) {
+                            sb.append(link.getText());
+                        }
+                    }
+                    if (sb.toString().toLowerCase().contains(lower)) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (found) {
+                filtered.add(box);
             }
         }
         messageContainer.getChildren().setAll(filtered);
