@@ -68,6 +68,8 @@ public class ChatController implements Initializable {
 
     private UsersDialogMode usersDialogMode = UsersDialogMode.CREATE_CHAT;
 
+    private Stage mainStage;
+
     public void initialize(URL location, ResourceBundle resources) {
         groupInfoVBox.setCursor(Cursor.HAND);
 
@@ -154,6 +156,11 @@ public class ChatController implements Initializable {
                 }
             }
         });
+
+        // Сохраняем ссылку на основной Stage для уведомлений
+        Platform.runLater(() -> {
+            mainStage = (Stage) messageTextField.getScene().getWindow();
+        });
     }
 
     public void createChatButtonOnActivation(ActionEvent e) {
@@ -237,11 +244,38 @@ public class ChatController implements Initializable {
         }
     }
 
+    private void showPopupNotification(String text) {
+        if (mainStage == null)
+            return;
+        Stage popup = new Stage();
+        popup.initOwner(mainStage);
+        popup.initStyle(javafx.stage.StageStyle.UNDECORATED);
+        popup.setAlwaysOnTop(true);
+        Label label = new Label(text);
+        label.setStyle(
+                "-fx-background-color: #323232; -fx-text-fill: white; -fx-padding: 16; -fx-font-size: 14; -fx-background-radius: 8;");
+        Scene scene = new Scene(new VBox(label));
+        popup.setScene(scene);
+        // Позиционируем в правом нижнем углу
+        popup.setX(mainStage.getX() + mainStage.getWidth() - 300);
+        popup.setY(mainStage.getY() + mainStage.getHeight() - 100);
+        popup.show();
+        // Автоматически закрыть через 3 секунды
+        new Thread(() -> {
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException ignored) {
+            }
+            Platform.runLater(popup::close);
+        }).start();
+    }
+
     private void addMessageToChat(String responseXml) {
         try {
             // System.out.println("Received on ChatController XML:\n" + responseXml);
             List<Message> messages = ClientRequest.parseChatMessages(responseXml);
             Platform.runLater(() -> {
+                boolean notify = false;
                 for (Message msg : messages) {
                     // Форматируем время
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
@@ -285,9 +319,17 @@ public class ChatController implements Initializable {
                         messageBox.setStyle("-fx-alignment: top-left;");
                     }
                     messageContainer.getChildren().add(messageBox);
+                    // Если сообщение не от текущего пользователя, помечаем для уведомления
+                    if (!msg.getUsername().equals(userName)) {
+                        notify = true;
+                    }
                 }
                 // Прокручиваем вниз после добавления новых сообщений
                 scrollPane.setVvalue(1.0);
+                // Показываем уведомление, если окно неактивно и есть новое чужое сообщение
+                if (notify && mainStage != null && (!mainStage.isFocused() || mainStage.isIconified())) {
+                    showPopupNotification("Новое сообщение в чате!");
+                }
             });
 
         } catch (Exception e) {
@@ -448,8 +490,6 @@ public class ChatController implements Initializable {
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
-            // После получения <users> сервером, showUsersForNewChat будет вызван
-            // Можно реализовать отдельное окно выбора пользователя для добавления
         });
 
         // Кнопка сохранить изменения
