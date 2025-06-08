@@ -29,6 +29,13 @@ import common.GroupInfo;
 import common.Message;
 import javafx.application.Platform;
 import javafx.stage.Stage;
+import javafx.stage.FileChooser;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import java.io.File;
+import java.io.FileInputStream;
+import java.util.Base64;
+import java.io.ByteArrayOutputStream;
 
 public class ChatController implements Initializable {
     @FXML
@@ -243,23 +250,44 @@ public class ChatController implements Initializable {
                     Label metaLabel = new Label(msg.getUsername() + " • " + timeText);
                     metaLabel.setStyle("-fx-font-size: 10; -fx-text-fill: gray;");
 
-                    Label messageLabel = new Label(msg.getContent());
-                    messageLabel.setWrapText(true);
-                    messageLabel.setStyle("-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
-
-                    VBox messageVBox = new VBox(metaLabel, messageLabel);
+                    VBox messageVBox = new VBox();
                     messageVBox.setSpacing(2);
+
+                    String content = msg.getContent();
+                    if (content != null && content.startsWith("[image;base64,")) {
+                        try {
+                            int start = "[image;base64,".length();
+                            int end = content.lastIndexOf("]");
+                            String base64 = content.substring(start, end);
+                            byte[] imageBytes = Base64.getDecoder().decode(base64);
+                            Image image = new Image(new java.io.ByteArrayInputStream(imageBytes));
+                            ImageView imageView = new ImageView(image);
+                            imageView.setFitWidth(220);
+                            imageView.setPreserveRatio(true);
+                            imageView.setSmooth(true);
+                            imageView.setCache(true);
+                            messageVBox.getChildren().addAll(metaLabel, imageView);
+                        } catch (Exception ex) {
+                            // Если не удалось декодировать, показываем как текст
+                            Label messageLabel = new Label("[Ошибка изображения]");
+                            messageLabel.setWrapText(true);
+                            messageVBox.getChildren().addAll(metaLabel, messageLabel);
+                        }
+                    } else {
+                        Label messageLabel = new Label(content);
+                        messageLabel.setWrapText(true);
+                        messageLabel
+                                .setStyle("-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
+                        messageVBox.getChildren().addAll(metaLabel, messageLabel);
+                    }
 
                     HBox messageBox = new HBox(messageVBox);
                     messageBox.maxWidthProperty().bind(messageContainer.widthProperty().subtract(20));
-
-                    // Выравнивание по отправителю
                     if (msg.getUsername().equals(userName)) {
                         messageBox.setStyle("-fx-alignment: top-right;");
                     } else {
                         messageBox.setStyle("-fx-alignment: top-left;");
                     }
-
                     messageContainer.getChildren().add(messageBox);
                 }
                 // Прокручиваем вниз после добавления новых сообщений
@@ -452,5 +480,33 @@ public class ChatController implements Initializable {
         stage.setScene(scene);
         stage.initModality(Modality.APPLICATION_MODAL);
         stage.showAndWait();
+    }
+
+    @FXML
+    private void sendImageButtonOnActivation(ActionEvent e) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Выберите изображение");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Изображения", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
+        File file = fileChooser.showOpenDialog(messageTextField.getScene().getWindow());
+        if (file != null) {
+            try (FileInputStream fis = new FileInputStream(file)) {
+                // Читаем файл в массив байт
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    baos.write(buffer, 0, bytesRead);
+                }
+                byte[] imageBytes = baos.toByteArray();
+                String base64 = Base64.getEncoder().encodeToString(imageBytes);
+                String content = "[image;base64," + base64 + "]";
+                // Отправляем как обычное сообщение
+                String requestSendMessage = ClientRequest.sendMessageRequest(chatId, userName, content);
+                client.sendSystemMessage(requestSendMessage);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
     }
 }

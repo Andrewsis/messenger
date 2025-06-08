@@ -18,7 +18,12 @@
          </children></AnchorPane>
       <AnchorPane layoutX="190.0" maxWidth="1.7976931348623157E308" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="190.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
          <children>
-            <ScrollPane fx:id="scrollPane" fitToWidth="true" hbarPolicy="NEVER" layoutY="40.0" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="340.0" prefWidth="410.0" vbarPolicy="NEVER" AnchorPane.bottomAnchor="30.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="40.0">
+            <Button fx:id="sendImageButton" layoutX="10.0" layoutY="10.0" maxHeight="30.0" maxWidth="30.0" minHeight="30.0" minWidth="30.0" mnemonicParsing="false" onAction="#sendImageButtonOnActivation" prefHeight="30.0" prefWidth="30.0" text="Img" textOverrun="CLIP" AnchorPane.bottomAnchor="0.0" AnchorPane.rightAnchor="30.0">
+               <font>
+                  <Font size="10.0" />
+               </font>
+            </Button>
+            <ScrollPane fx:id="scrollPane" fitToWidth="true" hbarPolicy="NEVER" layoutY="40.0" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="340.0" prefWidth="410.0" AnchorPane.bottomAnchor="30.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="40.0">
                <content>
                   <VBox fx:id="messageContainer" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" />
                </content>
@@ -28,8 +33,8 @@
                   <Font size="2.0" />
                </font>
             </Button>
-            <TextField fx:id="messageTextField" layoutY="380.0" maxHeight="30.0" minHeight="30.0" prefHeight="30.0" prefWidth="380.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="30.0" />
-            <VBox fx:id="groupInfoVBox" prefHeight="40.0" prefWidth="410.0" AnchorPane.bottomAnchor="370.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <TextField fx:id="messageTextField" layoutY="380.0" maxHeight="30.0" minHeight="30.0" prefHeight="30.0" prefWidth="380.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="60.0" />
+            <VBox fx:id="groupInfoVBox" maxHeight="-Infinity" minHeight="-Infinity" prefHeight="40.0" prefWidth="410.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                <children>
                   <Label fx:id="groupName" style="-fx-padding: 0 0 0 10;" text="Group name">
                      <font>
