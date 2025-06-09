@@ -9,7 +9,7 @@ import javafx.stage.Window;
 import java.util.Arrays;
 import java.util.List;
 
-public class EmojiPopup {
+public class EmojiPopupUtils {
     private static final List<String> EMOJIS = Arrays.asList(
             "😀", "😁", "😂", "🤣", "😃", "😄", "😅", "😆", "😉", "😊",
             "😍", "😘", "😗", "😙", "😚", "🙂", "🤗", "🤔", "😐",
@@ -18,7 +18,7 @@ public class EmojiPopup {
 
     private final Popup popup = new Popup();
 
-    public EmojiPopup(TextField targetField) {
+    public EmojiPopupUtils(TextField targetField) {
         FlowPane pane = new FlowPane();
         pane.setHgap(6);
         pane.setVgap(6);

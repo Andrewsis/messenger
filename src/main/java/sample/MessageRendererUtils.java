@@ -10,7 +10,7 @@ import javafx.scene.text.TextFlow;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 
-public class MessageRenderer {
+public class MessageRendererUtils {
     public static HBox render(Message msg, String currentUserName, double containerWidth) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
         String timeText = msg.getTimestamp().format(formatter);

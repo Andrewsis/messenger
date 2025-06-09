@@ -7,7 +7,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
-public class PopupNotifier {
+public class PopupNotifierUtils {
     public static void show(Window owner, String text) {
         if (owner == null)
             return;

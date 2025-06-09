@@ -30,8 +30,6 @@ import common.Message;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 import javafx.stage.FileChooser;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Base64;
@@ -39,11 +37,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import javafx.scene.control.Button;
-import javafx.scene.layout.FlowPane;
-import javafx.stage.Popup;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
-import javafx.scene.control.Hyperlink;
 
 public class ChatController implements Initializable {
     @FXML
@@ -71,7 +64,7 @@ public class ChatController implements Initializable {
     public String userName = null;
     public int chatId = -1;
     private GroupInfo groupInfo;
-    private EmojiPopup emojiPopup;
+    private EmojiPopupUtils emojiPopup;
 
     private enum UsersDialogMode {
         CREATE_CHAT, ADD_TO_GROUP
@@ -229,7 +222,7 @@ public class ChatController implements Initializable {
     // --- Всплывающее окно с эмодзи ---
     private void showEmojiPopup() {
         if (emojiPopup == null) {
-            emojiPopup = new EmojiPopup(messageTextField);
+            emojiPopup = new EmojiPopupUtils(messageTextField);
         }
         double x = emojiButton.localToScreen(0, 0).getX();
         double y = emojiButton.localToScreen(0, emojiButton.getHeight()).getY();
@@ -288,7 +281,7 @@ public class ChatController implements Initializable {
     }
 
     private void showPopupNotification(String text) {
-        PopupNotifier.show(mainStage, text);
+        PopupNotifierUtils.show(mainStage, text);
     }
 
     private List<HBox> allMessageBoxes = new java.util.ArrayList<>();
@@ -302,7 +295,7 @@ public class ChatController implements Initializable {
                     messageContainer.getChildren().clear();
                     allMessageBoxes.clear();
                     for (Message msg : messages) {
-                        HBox messageBox = MessageRenderer.render(msg, userName, messageContainer.getWidth());
+                        HBox messageBox = MessageRendererUtils.render(msg, userName, messageContainer.getWidth());
                         messageContainer.getChildren().add(messageBox);
                         allMessageBoxes.add(messageBox);
                         if (!msg.getUsername().equals(userName)) {
@@ -311,7 +304,7 @@ public class ChatController implements Initializable {
                     }
                 } else if (messages.size() == 1) {
                     Message msg = messages.get(0);
-                    HBox messageBox = MessageRenderer.render(msg, userName, messageContainer.getWidth());
+                    HBox messageBox = MessageRendererUtils.render(msg, userName, messageContainer.getWidth());
                     messageContainer.getChildren().add(messageBox);
                     allMessageBoxes.add(messageBox);
                     if (!msg.getUsername().equals(userName)) {
@@ -408,92 +401,13 @@ public class ChatController implements Initializable {
         }
     }
 
+    public void setUsersDialogModeAddToGroup() {
+        usersDialogMode = UsersDialogMode.ADD_TO_GROUP;
+    }
+
     private void handleGroupInfo(String responseXml) {
         groupInfo = ClientRequest.parseGroupInfo(responseXml);
-
-        Stage stage = new Stage();
-        stage.setTitle("Редактировать группу");
-
-        VBox vbox = new VBox();
-        vbox.setPadding(new Insets(15));
-        vbox.setSpacing(10);
-
-        // Название группы
-        TextField nameField = new TextField(groupName.getText());
-        nameField.setPromptText("Название группы");
-
-        // Описание группы
-        TextField descField = new TextField(groupInfo.getGroupBio());
-        descField.setPromptText("Описание группы");
-
-        // Список участников
-        Label membersTitle = new Label("Участники:");
-        ListView<String> membersList = new ListView<>();
-
-        membersList.getItems().addAll(groupInfo.getMembers());
-
-        // Кнопка удалить участника
-        javafx.scene.control.Button removeBtn = new javafx.scene.control.Button("Удалить выбранного");
-        removeBtn.setOnAction(_ -> {
-            String selectedUser = membersList.getSelectionModel().getSelectedItem();
-            if (selectedUser != null && !selectedUser.equals(userName)) {
-                // Отправить запрос на удаление участника
-                try {
-                    String req = ClientRequest.removeUserFromChatRequest(selectedUser, chatId);
-                    client.sendSystemMessage(req);
-                    membersList.getItems().remove(selectedUser);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-        });
-
-        // Кнопка добавить участника
-        javafx.scene.control.Button addBtn = new javafx.scene.control.Button("Добавить участника");
-        addBtn.setOnAction(_ -> {
-            // Получить всех пользователей, кроме уже в чате
-            try {
-                usersDialogMode = UsersDialogMode.ADD_TO_GROUP;
-                String req = ClientRequest.getAllUsersRequest();
-                client.sendSystemMessage(req);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        });
-
-        // Кнопка сохранить изменения
-        javafx.scene.control.Button saveBtn = new javafx.scene.control.Button("Сохранить");
-        saveBtn.setOnAction(_ -> {
-            // String newName = nameField.getText().trim(); // не используется
-            // String newDesc = descField.getText().trim(); // не используется
-            // if (!newName.isEmpty()) {
-            // String req = ClientRequest.updateChatInfoRequest(chatId, newName, newDesc);
-            // client.sendSystemMessage(req);
-            // groupName.setText(newName);
-            // }
-            stage.close();
-        });
-
-        // Кнопка экспортировать чат
-        javafx.scene.control.Button exportBtn = new javafx.scene.control.Button("Сохранить чат");
-        exportBtn.setOnAction(this::exportChatToTxt);
-
-        // Кнопки управления участниками
-        HBox membersBtnBox = new HBox(5, removeBtn, addBtn);
-        // Кнопки сохранения
-        HBox saveBtnBox = new HBox(5, saveBtn, exportBtn);
-
-        vbox.getChildren().addAll(
-                new Label("Название:"), nameField,
-                new Label("Описание:"), descField,
-                membersTitle, membersList,
-                membersBtnBox,
-                saveBtnBox);
-
-        Scene scene = new Scene(vbox, 350, 400);
-        stage.setScene(scene);
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.showAndWait();
+        GroupEditDialogUtils.show(mainStage, groupInfo, groupName.getText(), userName, chatId, client, this);
     }
 
     @FXML
@@ -526,7 +440,7 @@ public class ChatController implements Initializable {
 
     // --- Экспорт чата в txt ---
     @FXML
-    private void exportChatToTxt(ActionEvent e) {
+    public void exportChatToTxt(ActionEvent e) {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Save chat as TXT");
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Text file", "*.txt"));
