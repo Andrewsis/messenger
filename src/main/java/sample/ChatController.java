@@ -424,7 +424,7 @@ public class ChatController implements Initializable {
                             }
                         } else {
                             // --- replace Label with TextFlow with markdown ---
-                            TextFlow messageFlow = parseMarkdownToTextFlow(content);
+                            TextFlow messageFlow = MarkdownUtils.parseMarkdownToTextFlow(content);
                             // --- Message color depends on user ---
                             if (msg.getUsername().equals(userName)) {
                                 messageFlow.setStyle(
@@ -476,7 +476,7 @@ public class ChatController implements Initializable {
                         }
                     } else {
                         // --- replace Label with TextFlow with markdown ---
-                        TextFlow messageFlow = parseMarkdownToTextFlow(content);
+                        TextFlow messageFlow = MarkdownUtils.parseMarkdownToTextFlow(content);
                         // --- Message color depends on user ---
                         if (msg.getUsername().equals(userName)) {
                             messageFlow.setStyle(
@@ -512,57 +512,6 @@ public class ChatController implements Initializable {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    // --- Markdown парсер для жирного, курсива и ссылок ---
-    private TextFlow parseMarkdownToTextFlow(String text) {
-        TextFlow flow = new TextFlow();
-        if (text == null)
-            return flow;
-
-        // Паттерны: **bold**, *italic*, [text](url)
-        Pattern pattern = Pattern.compile(
-                "(\\*\\*([^*]+)\\*\\*)" + // bold
-                        "|(\\*([^*]+)\\*)" + // italic
-                        "|(\\[([^\\]]+)\\]\\(([^)]+)\\))" // link
-        );
-        Matcher matcher = pattern.matcher(text);
-
-        int lastEnd = 0;
-        while (matcher.find()) {
-            // Обычный текст до совпадения
-            if (matcher.start() > lastEnd) {
-                flow.getChildren().add(new Text(text.substring(lastEnd, matcher.start())));
-            }
-            if (matcher.group(1) != null) { // bold
-                Text t = new Text(matcher.group(2));
-                t.setStyle("-fx-font-weight: bold;");
-                flow.getChildren().add(t);
-            } else if (matcher.group(3) != null) { // italic
-                Text t = new Text(matcher.group(4));
-                t.setStyle("-fx-font-style: italic;");
-                flow.getChildren().add(t);
-            } else if (matcher.group(5) != null) { // link
-                String label = matcher.group(6);
-                String url = matcher.group(7);
-                Hyperlink link = new Hyperlink(label);
-                link.setOnAction(e -> {
-                    try {
-                        java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
-                    } catch (Exception ex) {
-                        // ignore
-                    }
-                });
-                link.setStyle("-fx-text-fill: #1976D2;");
-                flow.getChildren().add(link);
-            }
-            lastEnd = matcher.end();
-        }
-        // Остаток текста
-        if (lastEnd < text.length()) {
-            flow.getChildren().add(new Text(text.substring(lastEnd)));
-        }
-        return flow;
     }
 
     public void setClientConnection(String userName) {
@@ -784,80 +733,11 @@ public class ChatController implements Initializable {
     }
 
     private VBox createImageMessageBox(Image image, Label metaLabel) {
-        ImageView imageView = createChatImageView(image);
+        ImageView imageView = ImageUtils.createChatImageView(image, () -> ImageUtils.showImageFullscreen(image));
         VBox messageVBox = new VBox();
         messageVBox.setSpacing(2);
         messageVBox.getChildren().addAll(metaLabel, imageView);
         return messageVBox;
-    }
-
-    private ImageView createChatImageView(Image image) {
-        ImageView imageView = new ImageView(image);
-        imageView.setFitWidth(220);
-        imageView.setPreserveRatio(true);
-        imageView.setSmooth(true);
-        imageView.setCache(true);
-        imageView.setOnMouseClicked(_ -> showImageFullscreen(image));
-        return imageView;
-    }
-
-    private void showImageFullscreen(Image image) {
-        Stage stage = new Stage();
-        stage.setTitle("Просмотр изображения");
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setFullScreenExitHint("");
-        stage.setFullScreen(true);
-
-        ImageView fullView = new ImageView(image);
-        fullView.setPreserveRatio(true);
-        fullView.setSmooth(true);
-        fullView.setCache(true);
-        fullView.fitWidthProperty().bind(stage.widthProperty().subtract(80));
-        fullView.fitHeightProperty().bind(stage.heightProperty().subtract(80));
-
-        javafx.scene.control.Button saveBtn = new javafx.scene.control.Button("Скачать");
-        saveBtn.setStyle(
-                "-fx-background-color: #2196F3; -fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 8 16; -fx-font-size: 14;");
-        saveBtn.setOnAction(ev -> {
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Сохранить изображение");
-            fileChooser.getExtensionFilters().addAll(
-                    new FileChooser.ExtensionFilter("PNG", "*.png"),
-                    new FileChooser.ExtensionFilter("JPEG", "*.jpg", "*.jpeg"),
-                    new FileChooser.ExtensionFilter("Все файлы", "*.*"));
-            File file = fileChooser.showSaveDialog(stage);
-            if (file != null) {
-                try {
-                    String ext = "png";
-                    String fileName = file.getName().toLowerCase();
-                    if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg"))
-                        ext = "jpg";
-                    javax.imageio.ImageIO.write(
-                            javafx.embed.swing.SwingFXUtils.fromFXImage(image, null),
-                            ext,
-                            file);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-        });
-        // Кнопка в правом верхнем угле
-        VBox box = new VBox();
-        box.setStyle("-fx-background-color: rgba(20,20,20,0.95); -fx-alignment: center; -fx-padding: 40;");
-        javafx.scene.layout.StackPane stack = new javafx.scene.layout.StackPane(fullView);
-        StackPane.setAlignment(saveBtn, javafx.geometry.Pos.TOP_RIGHT);
-        StackPane.setMargin(saveBtn, new Insets(20, 20, 0, 0));
-        stack.getChildren().add(saveBtn);
-        box.getChildren().add(stack);
-        Scene scene = new Scene(box);
-        stage.setScene(scene);
-        // Закрытие по клику или Esc
-        fullView.setOnMouseClicked(_ -> stage.close());
-        scene.setOnKeyPressed(keyEvent -> {
-            if (keyEvent.getCode() == KeyCode.ESCAPE)
-                stage.close();
-        });
-        stage.show();
     }
 
     // --- Экспорт чата в txt ---
@@ -869,35 +749,7 @@ public class ChatController implements Initializable {
         File file = fileChooser.showSaveDialog(messageTextField.getScene().getWindow());
         if (file != null) {
             try (PrintWriter pw = new PrintWriter(new FileWriter(file, false))) {
-                for (HBox box : allMessageBoxes) {
-                    VBox vbox = (VBox) box.getChildren().get(0);
-                    String userAndTime = "";
-                    String text = "";
-                    for (Node node : vbox.getChildren()) {
-                        if (node instanceof Label label) {
-                            if (userAndTime.isEmpty()) {
-                                userAndTime = label.getText();
-                            } else {
-                                text = label.getText();
-                            }
-                        } else if (node instanceof TextFlow flow) {
-                            StringBuilder sb = new StringBuilder();
-                            for (Node t : flow.getChildren()) {
-                                if (t instanceof Text txt) {
-                                    sb.append(txt.getText());
-                                } else if (t instanceof Hyperlink link) {
-                                    sb.append(link.getText());
-                                }
-                            }
-                            text = sb.toString();
-                        } else if (node instanceof javafx.scene.control.TextArea area) {
-                            text = area.getText();
-                        }
-                    }
-                    if (!userAndTime.isEmpty() && !text.isEmpty()) {
-                        pw.println(userAndTime + ": " + text);
-                    }
-                }
+                ChatExportUtils.exportChatToTxt(allMessageBoxes, pw);
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
