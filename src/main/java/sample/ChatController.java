@@ -36,21 +36,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.Base64;
 import java.io.ByteArrayOutputStream;
-import javafx.scene.layout.StackPane;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import javafx.scene.control.Button;
-import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.FlowPane;
 import javafx.stage.Popup;
 import javafx.scene.text.Text;
-import javafx.scene.text.FontWeight;
-import javafx.scene.text.FontPosture;
 import javafx.scene.text.TextFlow;
-import javafx.scene.paint.Color;
 import javafx.scene.control.Hyperlink;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class ChatController implements Initializable {
     @FXML
@@ -78,6 +71,7 @@ public class ChatController implements Initializable {
     public String userName = null;
     public int chatId = -1;
     private GroupInfo groupInfo;
+    private EmojiPopup emojiPopup;
 
     private enum UsersDialogMode {
         CREATE_CHAT, ADD_TO_GROUP
@@ -234,46 +228,12 @@ public class ChatController implements Initializable {
 
     // --- Всплывающее окно с эмодзи ---
     private void showEmojiPopup() {
-        Popup popup = new Popup();
-        FlowPane emojiPane = new FlowPane();
-        emojiPane.setHgap(6);
-        emojiPane.setVgap(6);
-        emojiPane.setPadding(new Insets(10));
-        emojiPane.setStyle("-fx-background-color: white; -fx-border-color: #ccc; -fx-border-radius: 8;");
-
-        // Пример набора эмодзи (можно расширить)
-        String[] emojis = {
-                "😀", "😁", "😂", "🤣", "😃", "😄", "😅", "😆", "😉", "😊",
-                "😍", "😘", "😗", "😙", "😚", "🙂", "🤗", "🤔", "😐",
-                "😑", "😶", "🙄", "😏", "😣", "😥", "😮", "🤐", "😯", "😪",
-                "😫", "😴", "😌", "😛", "😜", "😝", "🤤", "😒", "😓", "😔"
-        };
-
-        for (String emoji : emojis) {
-            Button btn = new Button(emoji);
-            btn.setStyle("-fx-font-size: 20; -fx-background-radius: 8;");
-            btn.setOnAction(e -> {
-                insertEmojiToTextField(emoji);
-                popup.hide();
-            });
-            emojiPane.getChildren().add(btn);
+        if (emojiPopup == null) {
+            emojiPopup = new EmojiPopup(messageTextField);
         }
-
-        popup.getContent().add(emojiPane);
-        // Позиционируем popup под кнопкой
         double x = emojiButton.localToScreen(0, 0).getX();
         double y = emojiButton.localToScreen(0, emojiButton.getHeight()).getY();
-        popup.show(emojiButton, x, y);
-    }
-
-    private void insertEmojiToTextField(String emoji) {
-        int caret = messageTextField.getCaretPosition();
-        String text = messageTextField.getText();
-        StringBuilder sb = new StringBuilder(text);
-        sb.insert(caret, emoji);
-        messageTextField.setText(sb.toString());
-        messageTextField.positionCaret(caret + emoji.length());
-        messageTextField.requestFocus();
+        emojiPopup.show(emojiButton.getScene().getWindow(), x, y);
     }
 
     public void createChatButtonOnActivation(ActionEvent e) {
@@ -290,52 +250,22 @@ public class ChatController implements Initializable {
     private void showUsersForNewChat(String usersXml) {
         try {
             List<String> users = ClientRequest.parseAllUsers(usersXml);
-            users.remove(userName); // убираем себя из списка
+            users.remove(userName); // remove self
 
-            Stage stage = new Stage();
-            stage.setTitle("Создать новый чат");
+            DialogUtils.showCreateChatDialog(users, (selectedUser, chatInfo) -> {
+                try {
+                    String chatNameInput = chatInfo[0];
+                    String chatDescInput = chatInfo[1];
+                    String requestXml = ClientRequest.createChatRequest(userName, selectedUser, chatNameInput,
+                            chatDescInput);
+                    client.sendSystemMessage(requestXml);
 
-            VBox vbox = new VBox();
-            vbox.setPadding(new Insets(10));
-            vbox.setSpacing(10);
-
-            // Поля для ввода названия и описания чата
-            TextField chatNameField = new TextField();
-            chatNameField.setPromptText("Название чата");
-
-            TextField chatDescField = new TextField();
-            chatDescField.setPromptText("Описание чата");
-
-            vbox.getChildren().addAll(chatNameField, chatDescField);
-
-            for (String user : users) {
-                Label userLabel = new Label(user);
-                userLabel.setStyle("-fx-background-color: #f0f0f0; -fx-padding: 8; -fx-background-radius: 8;");
-                userLabel.setMaxWidth(Double.MAX_VALUE);
-
-                userLabel.setOnMouseClicked(_ -> {
-                    try {
-                        String chatNameInput = chatNameField.getText().trim();
-                        String chatDescInput = chatDescField.getText().trim();
-                        String requestXml = ClientRequest.createChatRequest(userName, user,
-                                chatNameInput, chatDescInput);
-                        client.sendSystemMessage(requestXml);
-
-                        requestXml = ClientRequest.getChatReviewsRequest(userName);
-                        client.sendSystemMessage(requestXml);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                    stage.close();
-                });
-
-                vbox.getChildren().add(userLabel);
-            }
-
-            Scene scene = new Scene(vbox, 300, 400);
-            stage.setScene(scene);
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.showAndWait();
+                    requestXml = ClientRequest.getChatReviewsRequest(userName);
+                    client.sendSystemMessage(requestXml);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            });
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -358,29 +288,7 @@ public class ChatController implements Initializable {
     }
 
     private void showPopupNotification(String text) {
-        if (mainStage == null)
-            return;
-        Stage popup = new Stage();
-        popup.initOwner(mainStage);
-        popup.initStyle(javafx.stage.StageStyle.UNDECORATED);
-        popup.setAlwaysOnTop(true);
-        Label label = new Label(text);
-        label.setStyle(
-                "-fx-background-color: #323232; -fx-text-fill: white; -fx-padding: 16; -fx-font-size: 14; -fx-background-radius: 8;");
-        Scene scene = new Scene(new VBox(label));
-        popup.setScene(scene);
-        // Position in the bottom right corner
-        popup.setX(mainStage.getX() + mainStage.getWidth() - 300);
-        popup.setY(mainStage.getY() + mainStage.getHeight() - 100);
-        popup.show();
-        // Auto close after 3 seconds
-        new Thread(() -> {
-            try {
-                Thread.sleep(3000);
-            } catch (InterruptedException ignored) {
-            }
-            Platform.runLater(popup::close);
-        }).start();
+        PopupNotifier.show(mainStage, text);
     }
 
     private List<HBox> allMessageBoxes = new java.util.ArrayList<>();
@@ -390,125 +298,31 @@ public class ChatController implements Initializable {
             List<Message> messages = ClientRequest.parseChatMessages(responseXml);
             Platform.runLater(() -> {
                 boolean notify = false;
-                // If more than one message arrived or the container is empty (first load) —
-                // clear and add all
                 if (messages.size() > 1 || messageContainer.getChildren().isEmpty()) {
                     messageContainer.getChildren().clear();
                     allMessageBoxes.clear();
                     for (Message msg : messages) {
-                        // Format time
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-                        String timeText = msg.getTimestamp().format(formatter);
-
-                        // Compose signature: username and time
-                        Label metaLabel = new Label(msg.getUsername() + " • " + timeText);
-                        metaLabel.setStyle("-fx-font-size: 10; -fx-text-fill: gray;");
-
-                        VBox messageVBox = new VBox();
-                        messageVBox.setSpacing(2);
-
-                        String content = msg.getContent();
-                        if (content != null && content.startsWith("[image;base64,")) {
-                            try {
-                                int start = "[image;base64,".length();
-                                int end = content.lastIndexOf("]");
-                                String base64 = content.substring(start, end);
-                                byte[] imageBytes = Base64.getDecoder().decode(base64);
-                                Image image = new Image(new java.io.ByteArrayInputStream(imageBytes));
-                                messageVBox.getChildren().add(createImageMessageBox(image, metaLabel));
-                            } catch (Exception ex) {
-                                // If failed to decode, show as text
-                                Label messageLabel = new Label("[Image error]");
-                                messageLabel.setWrapText(true);
-                                messageVBox.getChildren().addAll(metaLabel, messageLabel);
-                            }
-                        } else {
-                            // --- replace Label with TextFlow with markdown ---
-                            TextFlow messageFlow = MarkdownUtils.parseMarkdownToTextFlow(content);
-                            // --- Message color depends on user ---
-                            if (msg.getUsername().equals(userName)) {
-                                messageFlow.setStyle(
-                                        "-fx-background-color: #B3E5FC; -fx-padding: 8; -fx-background-radius: 10;");
-                            } else {
-                                messageFlow.setStyle(
-                                        "-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
-                            }
-                            messageVBox.getChildren().addAll(metaLabel, messageFlow);
-                        }
-
-                        HBox messageBox = new HBox(messageVBox);
-                        messageBox.maxWidthProperty().bind(messageContainer.widthProperty().subtract(20));
-                        if (msg.getUsername().equals(userName)) {
-                            messageBox.setStyle("-fx-alignment: top-right;");
-                        } else {
-                            messageBox.setStyle("-fx-alignment: top-left;");
-                        }
+                        HBox messageBox = MessageRenderer.render(msg, userName, messageContainer.getWidth());
                         messageContainer.getChildren().add(messageBox);
                         allMessageBoxes.add(messageBox);
-                        // If the message is not from the current user, mark for notification
                         if (!msg.getUsername().equals(userName)) {
                             notify = true;
                         }
                     }
                 } else if (messages.size() == 1) {
-                    // Add only the new message
                     Message msg = messages.get(0);
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-                    String timeText = msg.getTimestamp().format(formatter);
-                    Label metaLabel = new Label(msg.getUsername() + " • " + timeText);
-                    metaLabel.setStyle("-fx-font-size: 10; -fx-text-fill: gray;");
-                    VBox messageVBox = new VBox();
-                    messageVBox.setSpacing(2);
-                    String content = msg.getContent();
-                    if (content != null && content.startsWith("[image;base64,")) {
-                        try {
-                            int start = "[image;base64,".length();
-                            int end = content.lastIndexOf("]");
-                            String base64 = content.substring(start, end);
-                            byte[] imageBytes = Base64.getDecoder().decode(base64);
-                            Image image = new Image(new java.io.ByteArrayInputStream(imageBytes));
-                            messageVBox.getChildren().add(createImageMessageBox(image, metaLabel));
-                        } catch (Exception ex) {
-                            // If failed to decode, show as text
-                            Label messageLabel = new Label("[Image error]");
-                            messageLabel.setWrapText(true);
-                            messageVBox.getChildren().addAll(metaLabel, messageLabel);
-                        }
-                    } else {
-                        // --- replace Label with TextFlow with markdown ---
-                        TextFlow messageFlow = MarkdownUtils.parseMarkdownToTextFlow(content);
-                        // --- Message color depends on user ---
-                        if (msg.getUsername().equals(userName)) {
-                            messageFlow.setStyle(
-                                    "-fx-background-color: #B3E5FC; -fx-padding: 8; -fx-background-radius: 10;");
-                        } else {
-                            messageFlow.setStyle(
-                                    "-fx-background-color: #DCF8C6; -fx-padding: 8; -fx-background-radius: 10;");
-                        }
-                        messageVBox.getChildren().addAll(metaLabel, messageFlow);
-                    }
-                    HBox messageBox = new HBox(messageVBox);
-                    messageBox.maxWidthProperty().bind(messageContainer.widthProperty().subtract(20));
-                    if (msg.getUsername().equals(userName)) {
-                        messageBox.setStyle("-fx-alignment: top-right;");
-                    } else {
-                        messageBox.setStyle("-fx-alignment: top-left;");
-                    }
+                    HBox messageBox = MessageRenderer.render(msg, userName, messageContainer.getWidth());
                     messageContainer.getChildren().add(messageBox);
                     allMessageBoxes.add(messageBox);
-                    // If the message is not from the current user, mark for notification
                     if (!msg.getUsername().equals(userName)) {
                         notify = true;
                     }
                 }
-                // Прокручиваем вниз после добавления новых сообщений
                 scrollPane.setVvalue(1.0);
-                // Показываем уведомление, если окно неактивно и есть новое чужое сообщение
                 if (notify && mainStage != null && (!mainStage.isFocused() || mainStage.isIconified())) {
                     showPopupNotification("New message in chat!");
                 }
             });
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -579,38 +393,16 @@ public class ChatController implements Initializable {
     private void showUsersForAddToGroup(String usersXml) {
         try {
             List<String> users = ClientRequest.parseAllUsers(usersXml);
-            // Убираем уже существующих участников группы
             users.removeAll(groupInfo.getMembers());
 
-            Stage stage = new Stage();
-            stage.setTitle("Добавить участника в группу");
-
-            VBox vbox = new VBox();
-            vbox.setPadding(new Insets(10));
-            vbox.setSpacing(10);
-
-            for (String user : users) {
-                Label userLabel = new Label(user);
-                userLabel.setStyle("-fx-background-color: #f0f0f0; -fx-padding: 8; -fx-background-radius: 8;");
-                userLabel.setMaxWidth(Double.MAX_VALUE);
-
-                userLabel.setOnMouseClicked(event -> {
-                    try {
-                        String req = ClientRequest.addUserToChatRequest(user, chatId);
-                        client.sendSystemMessage(req);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                    stage.close();
-                });
-
-                vbox.getChildren().add(userLabel);
-            }
-
-            Scene scene = new Scene(vbox, 300, 400);
-            stage.setScene(scene);
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.showAndWait();
+            DialogUtils.showAddToGroupDialog(users, selectedUser -> {
+                try {
+                    String req = ClientRequest.addUserToChatRequest(selectedUser, chatId);
+                    client.sendSystemMessage(req);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            });
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -732,14 +524,6 @@ public class ChatController implements Initializable {
         }
     }
 
-    private VBox createImageMessageBox(Image image, Label metaLabel) {
-        ImageView imageView = ImageUtils.createChatImageView(image, () -> ImageUtils.showImageFullscreen(image));
-        VBox messageVBox = new VBox();
-        messageVBox.setSpacing(2);
-        messageVBox.getChildren().addAll(metaLabel, imageView);
-        return messageVBox;
-    }
-
     // --- Экспорт чата в txt ---
     @FXML
     private void exportChatToTxt(ActionEvent e) {
@@ -757,41 +541,8 @@ public class ChatController implements Initializable {
     }
 
     private void filterMessages(String query) {
-        if (query == null || query.isBlank()) {
-            messageContainer.getChildren().setAll(allMessageBoxes);
-            return;
-        }
-        String lower = query.toLowerCase();
-        List<HBox> filtered = new java.util.ArrayList<>();
-        for (HBox box : allMessageBoxes) {
-            VBox vbox = (VBox) box.getChildren().get(0);
-            boolean found = false;
-            for (javafx.scene.Node node : vbox.getChildren()) {
-                if (node instanceof Label label && label.getText().toLowerCase().contains(lower)) {
-                    found = true;
-                    break;
-                }
-                // --- ищем по содержимому TextFlow ---
-                if (node instanceof TextFlow flow) {
-                    StringBuilder sb = new StringBuilder();
-                    for (javafx.scene.Node t : flow.getChildren()) {
-                        if (t instanceof Text txt) {
-                            sb.append(txt.getText());
-                        } else if (t instanceof Hyperlink link) {
-                            sb.append(link.getText());
-                        }
-                    }
-                    if (sb.toString().toLowerCase().contains(lower)) {
-                        found = true;
-                        break;
-                    }
-                }
-            }
-            if (found) {
-                filtered.add(box);
-            }
-        }
-        messageContainer.getChildren().setAll(filtered);
+        messageContainer.getChildren().setAll(
+                MessageFilterUtils.filter(allMessageBoxes, query));
     }
 
     private void showSearchField() {
