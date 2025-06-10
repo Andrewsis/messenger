@@ -1,4 +1,4 @@
-package sample;
+package sample.utils;
 
 import common.Message;
 import javafx.scene.control.Label;

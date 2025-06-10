@@ -1,4 +1,4 @@
-package sample;
+package sample.utils;
 
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;

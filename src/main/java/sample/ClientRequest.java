@@ -28,21 +28,16 @@ import java.time.temporal.ChronoField;
 
 public class ClientRequest {
     public static String getMessagesRequest(Integer chatId) throws Exception {
-        // Создаем объект DocumentBuilder
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
 
-        // Создаем новый документ
         Document doc = builder.newDocument();
 
-        // Создаем элемент запроса
         Element getMessages = doc.createElement("getMessages");
-        getMessages.setAttribute("chatId", chatId.toString()); // Преобразуем Integer в String
+        getMessages.setAttribute("chatId", chatId.toString());
 
-        // Добавляем элемент в корень документа
         doc.appendChild(getMessages);
 
-        // Преобразуем документ в строку
         Transformer transformer = TransformerFactory.newInstance().newTransformer();
         StringWriter writer = new StringWriter();
         transformer.transform(new DOMSource(doc), new StreamResult(writer));
@@ -50,7 +45,6 @@ public class ClientRequest {
     }
 
     public static String sendMessageRequest(Integer chatId, String sender, String content) throws Exception {
-
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
 
@@ -71,21 +65,16 @@ public class ClientRequest {
     }
 
     public static String getChatReviewsRequest(String userName) throws Exception {
-        // Создаем объект DocumentBuilder
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
 
-        // Создаем новый документ
         Document doc = builder.newDocument();
 
-        // Создаем элемент запроса
         Element getChatReviews = doc.createElement("getChatReviews");
         getChatReviews.setAttribute("userName", userName);
 
-        // Добавляем элемент в корень документа
         doc.appendChild(getChatReviews);
 
-        // Преобразуем документ в строку
         Transformer transformer = TransformerFactory.newInstance().newTransformer();
         StringWriter writer = new StringWriter();
         transformer.transform(new DOMSource(doc), new StreamResult(writer));
@@ -93,20 +82,15 @@ public class ClientRequest {
     }
 
     public static String getAllUsersRequest() throws Exception {
-        // Создаем объект DocumentBuilder
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
 
-        // Создаем новый документ
         Document doc = builder.newDocument();
 
-        // Создаем элемент запроса
         Element getAllUsers = doc.createElement("getAllUsers");
 
-        // Добавляем элемент в корень документа
         doc.appendChild(getAllUsers);
 
-        // Преобразуем документ в строку
         Transformer transformer = TransformerFactory.newInstance().newTransformer();
         StringWriter writer = new StringWriter();
         transformer.transform(new DOMSource(doc), new StreamResult(writer));
@@ -205,6 +189,23 @@ public class ClientRequest {
         return writer.toString() + "<END_OF_MESSAGE>";
     }
 
+    public static String sendLoginRequest(String userName, String password) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+
+        Document doc = builder.newDocument();
+
+        Element login = doc.createElement("login");
+        login.setAttribute("userName", userName);
+        login.setAttribute("password", password);
+
+        doc.appendChild(login);
+
+        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(writer));
+        return writer.toString() + "<END_OF_MESSAGE>";
+    }
     // PARSING XML
 
     public static List<ChatPreview> parseChatPreviews(String responseXml) {
@@ -219,7 +220,6 @@ public class ClientRequest {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
 
-            // Удаляем возможный маркер <END_OF_MESSAGE>
             responseXml = responseXml.replace("<END_OF_MESSAGE>", "").trim();
 
             Document doc = builder.parse(new InputSource(new StringReader(responseXml)));
@@ -342,7 +342,6 @@ public class ClientRequest {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
 
-            // Удаляем возможный маркер <END_OF_MESSAGE>
             responseXml = responseXml.replace("<END_OF_MESSAGE>", "").trim();
 
             Document doc = builder.parse(new InputSource(new StringReader(responseXml)));
@@ -377,7 +376,6 @@ public class ClientRequest {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
 
-            // Удаляем возможный маркер <END_OF_MESSAGE>
             responseXml = responseXml.replace("<END_OF_MESSAGE>", "").trim();
 
             Document doc = builder.parse(new InputSource(new StringReader(responseXml)));
@@ -410,7 +408,7 @@ public class ClientRequest {
         return null;
     }
 
-    // Вспомогательный метод для безопасного получения значения тега
+    // method to extract SECURELY content from a specific tag
     private static String getTagContent(Element element, String tagName) {
         Node node = element.getElementsByTagName(tagName).item(0);
         return node != null ? node.getTextContent() : "";

@@ -1,4 +1,4 @@
-package sample;
+package sample.utils;
 
 import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;

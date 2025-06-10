@@ -317,7 +317,6 @@ public class ServerResponse {
         DatabaseConnection connectNow = new DatabaseConnection();
         Connection connectDB = connectNow.getConnection();
 
-        // Получаем id пользователя по username
         int userId = -1;
         PreparedStatement userStmt = connectDB.prepareStatement(
                 "SELECT id FROM user_accounts WHERE username = ?");
@@ -350,7 +349,6 @@ public class ServerResponse {
             return statusResponse(400, "User already in chat");
         }
 
-        // Вставляем участника в чат
         PreparedStatement partStmt = connectDB.prepareStatement(
                 "INSERT INTO chat_participants (chat_id, user_id) VALUES (?, ?)");
         partStmt.setInt(1, chatId);
@@ -364,16 +362,14 @@ public class ServerResponse {
     }
 
     public static void main(String[] args) throws Exception {
-        // Пример ответа на запрос сообщений
+
         List<ChatPreviewServ> chats = ChatPreviewServ.getChatPreview("vanya");
         // String responseXml = messagesResponse(chats);
         // System.out.println(responseXml);
 
-        // // Пример ответа на успешную отправку сообщения
         // String statusXml = statusResponse(200, "Message delivered");
         // System.out.println(statusXml);
 
-        // // Пример ответа на ошибку
         // String errorXml = statusResponse(400, "Invalid chatId");
         // System.out.println(errorXml);
     }

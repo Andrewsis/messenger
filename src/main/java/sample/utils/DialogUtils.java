@@ -1,4 +1,4 @@
-package sample;
+package sample.utils;
 
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -13,12 +13,6 @@ import java.util.function.BiConsumer;
 
 public class DialogUtils {
 
-    /**
-     * Show dialog for creating a new chat.
-     * 
-     * @param users          List of users (excluding current user)
-     * @param onUserSelected Callback: (selectedUser, [chatName, chatDesc])
-     */
     public static void showCreateChatDialog(List<String> users, BiConsumer<String, String[]> onUserSelected) {
         Stage stage = new Stage();
         stage.setTitle("Create new chat");
@@ -56,12 +50,6 @@ public class DialogUtils {
         stage.showAndWait();
     }
 
-    /**
-     * Show dialog for adding users to group.
-     * 
-     * @param users          List of users to add
-     * @param onUserSelected Callback: (selectedUser)
-     */
     public static void showAddToGroupDialog(List<String> users, java.util.function.Consumer<String> onUserSelected) {
         Stage stage = new Stage();
         stage.setTitle("Add user to group");

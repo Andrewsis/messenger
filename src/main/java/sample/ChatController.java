@@ -3,9 +3,7 @@ package sample;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.geometry.Insets;
 import javafx.scene.Cursor;
-import javafx.scene.Scene;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -14,7 +12,6 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
-import javafx.stage.Modality;
 import javafx.scene.layout.HBox;
 import server.Client;
 import server.Constants;
@@ -29,6 +26,13 @@ import common.GroupInfo;
 import common.Message;
 import javafx.application.Platform;
 import javafx.stage.Stage;
+import sample.utils.ChatExportUtils;
+import sample.utils.DialogUtils;
+import sample.utils.EmojiPopupUtils;
+import sample.utils.GroupEditDialogUtils;
+import sample.utils.MessageFilterUtils;
+import sample.utils.MessageRendererUtils;
+import sample.utils.PopupNotifierUtils;
 import javafx.stage.FileChooser;
 import java.io.File;
 import java.io.FileInputStream;
@@ -73,18 +77,16 @@ public class ChatController implements Initializable {
     private Stage mainStage;
     private UsersDialogMode usersDialogMode = UsersDialogMode.CREATE_CHAT;
 
-    private TextField searchTextField; // поле поиска
-    private javafx.scene.layout.AnchorPane mainAnchor; // родительский AnchorPane для динамического добавления поля
-                                                       // поиска
+    private TextField searchTextField;
+    private javafx.scene.layout.AnchorPane mainAnchor;
 
     public void initialize(URL location, ResourceBundle resources) {
         groupInfoVBox.setCursor(Cursor.HAND);
 
-        // Изменяем фон при наведении мыши
+        // Change cursor on hover groupInfoVBox
         groupInfoVBox.setOnMouseEntered(e -> groupInfoVBox.setStyle("-fx-background-color: #e0e0e0;"));
         groupInfoVBox.setOnMouseExited(e -> groupInfoVBox.setStyle(""));
 
-        // Обработчик клика
         groupInfoVBox.setOnMouseClicked(e -> {
             try {
                 String requestMessagesXml = ClientRequest.getGroupInfoRequest(chatId);
@@ -99,8 +101,6 @@ public class ChatController implements Initializable {
             private final VBox textContainer;
             private final Label chatName;
             private final Label lastMessage;
-            // Конструктор для инициализации элементов интерфейса
-
             {
                 chatName = new Label();
                 chatName.setStyle("-fx-font-weight: bold;");
@@ -131,7 +131,7 @@ public class ChatController implements Initializable {
 
         messageTextField.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
-                sendButtonOnActivation(new ActionEvent()); // вызываем тот же метод
+                sendButtonOnActivation(new ActionEvent());
             }
         });
         // Also allow scrolling to bottom when chat area is focused and DOWN is pressed
@@ -164,14 +164,13 @@ public class ChatController implements Initializable {
             }
         });
 
-        // Сохраняем ссылку на основной Stage для уведомлений
         Platform.runLater(() -> {
             mainStage = (Stage) messageTextField.getScene().getWindow();
         });
 
-        // --- Поиск: строка поиска ---
+        // Search field setup
         searchTextField = new TextField();
-        searchTextField.setPromptText("Поиск по сообщениям...");
+        searchTextField.setPromptText("Search...");
         searchTextField.setMinWidth(200);
         searchTextField.setStyle(
                 "-fx-background-radius: 8; -fx-padding: 6 10; -fx-font-size: 13; -fx-background-color: white; -fx-effect: dropshadow(gaussian, #888, 8, 0.2, 0, 2);");
@@ -186,13 +185,11 @@ public class ChatController implements Initializable {
                 hideSearchField();
         });
 
-        // Найдём AnchorPane-родитель scrollPane (mainAnchor)
         Node parent = scrollPane.getParent();
         if (parent instanceof javafx.scene.layout.AnchorPane anchor) {
             mainAnchor = anchor;
         }
 
-        // Глобальный хоткей Ctrl+F (оставьте этот блок для scrollPane, если хотите)
         scrollPane.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.F && event.isControlDown()) {
                 showSearchField();
@@ -200,7 +197,6 @@ public class ChatController implements Initializable {
             }
         });
 
-        // --- Добавьте этот блок для всей сцены ---
         Platform.runLater(() -> {
             mainStage = (Stage) messageTextField.getScene().getWindow();
             if (mainStage != null && mainStage.getScene() != null) {
@@ -212,7 +208,6 @@ public class ChatController implements Initializable {
                 });
             }
         });
-        // --- конец нового блока ---
 
         if (emojiButton != null) {
             emojiButton.setOnAction(e -> showEmojiPopup());
@@ -335,9 +330,8 @@ public class ChatController implements Initializable {
                 Platform.runLater(() -> {
                     if (message.contains("<chatPreviews>")) {
                         handleChatPreview(message);
-                    } // если это XML с чатами
-                    else if (message.contains("<messages>")) {
-                        addMessageToChat(message); // обычное сообщение
+                    } else if (message.contains("<messages>")) {
+                        addMessageToChat(message);
                     } else if (message.contains("<users>")) {
                         if (usersDialogMode == UsersDialogMode.CREATE_CHAT) {
                             showUsersForNewChat(message);
@@ -345,7 +339,7 @@ public class ChatController implements Initializable {
                             showUsersForAddToGroup(message);
                         }
                     } else if (message.contains("<groupInfo>")) {
-                        handleGroupInfo(message); // обычное сообщение
+                        handleGroupInfo(message);
                     }
                 });
             });
@@ -413,13 +407,13 @@ public class ChatController implements Initializable {
     @FXML
     private void sendImageButtonOnActivation(ActionEvent e) {
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Выберите изображение");
+        fileChooser.setTitle("Choose image to send");
         fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Изображения", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
+                new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
         File file = fileChooser.showOpenDialog(messageTextField.getScene().getWindow());
         if (file != null) {
             try (FileInputStream fis = new FileInputStream(file)) {
-                // Читаем файл в массив байт
+
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 byte[] buffer = new byte[8192];
                 int bytesRead;
@@ -429,7 +423,7 @@ public class ChatController implements Initializable {
                 byte[] imageBytes = baos.toByteArray();
                 String base64 = Base64.getEncoder().encodeToString(imageBytes);
                 String content = "[image;base64," + base64 + "]";
-                // Отправляем как обычное сообщение
+
                 String requestSendMessage = ClientRequest.sendMessageRequest(chatId, userName, content);
                 client.sendSystemMessage(requestSendMessage);
             } catch (Exception ex) {
@@ -438,7 +432,6 @@ public class ChatController implements Initializable {
         }
     }
 
-    // --- Экспорт чата в txt ---
     @FXML
     public void exportChatToTxt(ActionEvent e) {
         FileChooser fileChooser = new FileChooser();

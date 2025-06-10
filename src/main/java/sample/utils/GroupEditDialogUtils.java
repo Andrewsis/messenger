@@ -1,4 +1,4 @@
-package sample;
+package sample.utils;
 
 import common.GroupInfo;
 import javafx.geometry.Insets;
@@ -8,13 +8,15 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import sample.ChatController;
+import sample.ClientRequest;
 import server.Client;
 
 public class GroupEditDialogUtils {
     public static void show(Stage owner, GroupInfo groupInfo, String groupName, String userName, int chatId,
             Client client, ChatController controller) {
         Stage stage = new Stage();
-        stage.setTitle("Редактировать группу");
+        stage.setTitle("Edit Group");
         stage.initOwner(owner);
 
         VBox vbox = new VBox();
@@ -22,16 +24,16 @@ public class GroupEditDialogUtils {
         vbox.setSpacing(10);
 
         TextField nameField = new TextField(groupName);
-        nameField.setPromptText("Название группы");
+        nameField.setPromptText("Group name");
 
         TextField descField = new TextField(groupInfo.getGroupBio());
-        descField.setPromptText("Описание группы");
+        descField.setPromptText("Group description");
 
-        Label membersTitle = new Label("Участники:");
+        Label membersTitle = new Label("Members:");
         ListView<String> membersList = new ListView<>();
         membersList.getItems().addAll(groupInfo.getMembers());
 
-        Button removeBtn = new Button("Удалить выбранного");
+        Button removeBtn = new Button("Remove selected");
         removeBtn.setOnAction(_ -> {
             String selectedUser = membersList.getSelectionModel().getSelectedItem();
             if (selectedUser != null && !selectedUser.equals(userName)) {
@@ -45,7 +47,7 @@ public class GroupEditDialogUtils {
             }
         });
 
-        Button addBtn = new Button("Добавить участника");
+        Button addBtn = new Button("Add member");
         addBtn.setOnAction(_ -> {
             try {
                 controller.setUsersDialogModeAddToGroup();
@@ -56,21 +58,20 @@ public class GroupEditDialogUtils {
             }
         });
 
-        Button saveBtn = new Button("Сохранить");
+        Button saveBtn = new Button("Save");
         saveBtn.setOnAction(_ -> {
-            // Можно реализовать сохранение изменений
             stage.close();
         });
 
-        Button exportBtn = new Button("Сохранить чат");
+        Button exportBtn = new Button("Export chat");
         exportBtn.setOnAction(event -> controller.exportChatToTxt(event));
 
         HBox membersBtnBox = new HBox(5, removeBtn, addBtn);
         HBox saveBtnBox = new HBox(5, saveBtn, exportBtn);
 
         vbox.getChildren().addAll(
-                new Label("Название:"), nameField,
-                new Label("Описание:"), descField,
+                new Label("Name:"), nameField,
+                new Label("Description:"), descField,
                 membersTitle, membersList,
                 membersBtnBox,
                 saveBtnBox);

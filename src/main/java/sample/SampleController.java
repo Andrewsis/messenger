@@ -54,11 +54,10 @@ public class SampleController {
             Statement statement = connectDB.createStatement();
             ResultSet resultSet = statement.executeQuery(checkUser);
 
+            // here we check if user exists. If not -> creating a new one
             if (resultSet.next()) {
-                // User exists, check password
                 String dbPassword = resultSet.getString("password");
                 if (dbPassword.equals(password)) {
-                    // Correct password, proceed to chat
                     try {
                         FXMLLoader loader = new FXMLLoader(getClass().getResource("/chat.fxml"));
                         Parent root = loader.load();

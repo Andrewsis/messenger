@@ -1,4 +1,4 @@
-package sample;
+package sample.utils;
 
 import javafx.scene.Node;
 import javafx.scene.control.Hyperlink;

@@ -51,6 +51,15 @@ public class HandleClientXML {
                 String chatName = root.getAttribute("chatName");
                 String chatDesc = root.getAttribute("chatDesc");
                 responseXml = ServerResponse.createChatResponse(ourUsername, otherUsername, chatName, chatDesc);
+
+                for (ClientHandler client : Server.getClients()) {
+                    if (client.getUserName().equals(otherUsername)) {
+                        List<ChatPreviewServ> chats = ChatPreviewServ.getChatPreview(otherUsername);
+                        String chatPreviewsXml = ServerResponse.getChatReviewsResponse(chats);
+                        client.sendMessage(chatPreviewsXml + "<END_OF_MESSAGE>");
+                        break;
+                    }
+                }
             }
             case "sendMessage" -> {
                 int chatId = Integer.parseInt(root.getAttribute("chatId"));
