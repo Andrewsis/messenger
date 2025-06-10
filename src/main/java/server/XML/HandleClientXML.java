@@ -18,19 +18,19 @@ import server.Server;
 
 public class HandleClientXML {
     public static String processXml(String xmlString) throws Exception {
-        // Парсинг входящего XML
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
         Document doc = builder.parse(new ByteArrayInputStream(xmlString.getBytes(StandardCharsets.UTF_8)));
 
-        // Корневой элемент
         Element root = doc.getDocumentElement();
 
         String responseXml;
 
         switch (root.getTagName()) {
             case "login" -> {
-                responseXml = ServerResponse.statusResponse(200, "Login successful");
+                String userName = root.getAttribute("userName");
+                String password = root.getAttribute("password");
+                responseXml = ServerResponse.loginResponse(userName, password);
             }
             case "getChatReviews" -> {
                 String userName = root.getAttribute("userName");
@@ -79,7 +79,6 @@ public class HandleClientXML {
                 int chatId = Integer.parseInt(root.getAttribute("chatId"));
 
                 responseXml = ServerResponse.removeUserFromChatResponse(username, chatId);
-                // После успешного удаления пользователя из чата
                 for (ClientHandler client : Server.getClients()) {
                     if (client.getUserName().equals(username)) {
                         String chatPreviewsXml = ServerResponse.getChatReviewsResponse(
@@ -109,7 +108,6 @@ public class HandleClientXML {
             }
         }
 
-        // Отправка XML-ответа
         return responseXml + "<END_OF_MESSAGE>";
     }
 }

@@ -11,11 +11,8 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.PasswordField;
 import javafx.scene.Node;
 import javafx.stage.Stage;
-import server.DatabaseConnection;
-
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import server.Client;
+import server.Constants;
 
 public class SampleController {
 
@@ -43,72 +40,42 @@ public class SampleController {
     }
 
     public void validateLogin(ActionEvent event) {
-        DatabaseConnection connectNow = new DatabaseConnection();
-        Connection connectDB = connectNow.getConnection();
         String username = username_textField.getText();
         String password = password_passwordField.getText();
 
-        String checkUser = "SELECT password FROM user_accounts WHERE username = '" + username + "'";
-
         try {
-            Statement statement = connectDB.createStatement();
-            ResultSet resultSet = statement.executeQuery(checkUser);
+            String loginRequest = ClientRequest.sendLoginRequest(username, password);
 
-            // here we check if user exists. If not -> creating a new one
-            if (resultSet.next()) {
-                String dbPassword = resultSet.getString("password");
-                if (dbPassword.equals(password)) {
-                    try {
-                        FXMLLoader loader = new FXMLLoader(getClass().getResource("/chat.fxml"));
-                        Parent root = loader.load();
+            Client client = new Client(new java.net.Socket(Constants.IP_ADDR, Constants.PORT), username);
+            client.sendSystemMessage(loginRequest);
 
-                        ChatController chatController = loader.getController();
-                        chatController.setClientConnection(username);
-
-                        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-                        stage.setScene(new Scene(root));
-
-                        stage.setMinWidth(600);
-                        stage.setMinHeight(300);
-                        stage.setTitle("Chat Application - " + username);
-
-                        stage.show();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        loginMessage_label.setText("Failed to load chat scene.");
-                    }
+            client.setOnMessageReceived(message -> {
+                if (message.contains("code=\"200\"")) {
+                    javafx.application.Platform.runLater(() -> {
+                        try {
+                            FXMLLoader loader = new FXMLLoader(getClass().getResource("/chat.fxml"));
+                            Parent root = loader.load();
+                            ChatController chatController = loader.getController();
+                            chatController.setClientConnection(username, client);
+                            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+                            stage.setScene(new Scene(root));
+                            stage.setMinWidth(600);
+                            stage.setMinHeight(300);
+                            stage.setTitle("Chat Application - " + username);
+                            stage.show();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            loginMessage_label.setText("Failed to load chat scene.");
+                        }
+                    });
                 } else {
-                    // Wrong password
-                    loginMessage_label.setText("Wrong password.");
+                    javafx.application.Platform.runLater(() -> loginMessage_label.setText("Login failed."));
                 }
-            } else {
-                // User does not exist, create new user
-                String addUser = "INSERT INTO user_accounts (username, password) VALUES ('"
-                        + username + "', '" + password + "')";
-                statement.executeUpdate(addUser);
-
-                try {
-                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/chat.fxml"));
-                    Parent root = loader.load();
-
-                    ChatController chatController = loader.getController();
-                    chatController.setClientConnection(username);
-
-                    Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-                    stage.setScene(new Scene(root));
-
-                    stage.setMinWidth(600);
-                    stage.setMinHeight(300);
-                    stage.setTitle("Chat Application - " + username);
-
-                    stage.show();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    loginMessage_label.setText("Failed to load chat scene.");
-                }
-            }
+            });
+            client.listenForMessage();
         } catch (Exception e) {
             e.printStackTrace();
+            loginMessage_label.setText("Failed to connect to server.");
         }
     }
 

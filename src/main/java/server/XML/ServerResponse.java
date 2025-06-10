@@ -333,7 +333,6 @@ public class ServerResponse {
             return statusResponse(400, "User not found");
         }
 
-        // Проверяем, не является ли пользователь уже участником чата
         PreparedStatement checkStmt = connectDB.prepareStatement(
                 "SELECT COUNT(*) FROM chat_participants WHERE chat_id = ? AND user_id = ?");
         checkStmt.setInt(1, chatId);
@@ -359,6 +358,36 @@ public class ServerResponse {
         connectDB.close();
 
         return statusResponse(200, "User added to chat successfully");
+    }
+
+    public static String loginResponse(String userName, String password) throws Exception {
+        DatabaseConnection connectNow = new DatabaseConnection();
+        Connection connectDB = connectNow.getConnection();
+        PreparedStatement stmt = connectDB.prepareStatement("SELECT password FROM user_accounts WHERE username = ?");
+        stmt.setString(1, userName);
+        ResultSet rs = stmt.executeQuery();
+        if (rs.next()) {
+            String dbPassword = rs.getString("password");
+            rs.close();
+            stmt.close();
+            connectDB.close();
+            if (dbPassword.equals(password)) {
+                return statusResponse(200, "Login successful");
+            } else {
+                return statusResponse(400, "Wrong password");
+            }
+        } else {
+            rs.close();
+            stmt.close();
+            PreparedStatement insertStmt = connectDB
+                    .prepareStatement("INSERT INTO user_accounts (username, password) VALUES (?, ?)");
+            insertStmt.setString(1, userName);
+            insertStmt.setString(2, password);
+            insertStmt.executeUpdate();
+            insertStmt.close();
+            connectDB.close();
+            return statusResponse(200, "User created and logged in");
+        }
     }
 
     public static void main(String[] args) throws Exception {

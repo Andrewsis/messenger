@@ -316,38 +316,33 @@ public class ChatController implements Initializable {
         }
     }
 
-    public void setClientConnection(String userName) {
+    public void setClientConnection(String userName, Client client) {
         this.userName = userName;
+        this.client = client;
         System.out.println("Logged in as: " + userName);
 
-        try {
-            Socket socket = new Socket(Constants.IP_ADDR, Constants.PORT);
-            this.client = new Client(socket, this.userName);
-            String loginXml = ClientRequest.sendLoginRequest(this.userName);
-            client.sendSystemMessage(loginXml);
-
-            client.setOnMessageReceived(message -> {
-                Platform.runLater(() -> {
-                    if (message.contains("<chatPreviews>")) {
-                        handleChatPreview(message);
-                    } else if (message.contains("<messages>")) {
-                        addMessageToChat(message);
-                    } else if (message.contains("<users>")) {
-                        if (usersDialogMode == UsersDialogMode.CREATE_CHAT) {
-                            showUsersForNewChat(message);
-                        } else if (usersDialogMode == UsersDialogMode.ADD_TO_GROUP) {
-                            showUsersForAddToGroup(message);
-                        }
-                    } else if (message.contains("<groupInfo>")) {
-                        handleGroupInfo(message);
+        client.setOnMessageReceived(message -> {
+            Platform.runLater(() -> {
+                if (message.contains("<chatPreviews>")) {
+                    handleChatPreview(message);
+                } else if (message.contains("<messages>")) {
+                    addMessageToChat(message);
+                } else if (message.contains("<users>")) {
+                    if (usersDialogMode == UsersDialogMode.CREATE_CHAT) {
+                        showUsersForNewChat(message);
+                    } else if (usersDialogMode == UsersDialogMode.ADD_TO_GROUP) {
+                        showUsersForAddToGroup(message);
                     }
-                });
+                } else if (message.contains("<groupInfo>")) {
+                    handleGroupInfo(message);
+                }
             });
-            client.listenForMessage();
+        });
+        client.listenForMessage();
 
+        try {
             String requestChatPreviewsXml = ClientRequest.getChatReviewsRequest(userName);
             client.sendSystemMessage(requestChatPreviewsXml);
-
         } catch (Exception e) {
             e.printStackTrace();
         }
